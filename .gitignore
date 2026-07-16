@@ -39,3 +39,12 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Variáveis de Ambiente
+.env
+*.env
+
+# AI & Agent Tools
+.claude/
+.codex/
+.agents/
