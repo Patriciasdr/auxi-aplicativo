@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Juridico: { boleto: BoletoProps };
   Circulares: undefined;
   AgendaCondominio: undefined;
+  Notificacoes: undefined;
 };
 
 export type AppNavigatorRoutesProps = NativeStackNavigationProp<RootStackParamList>;

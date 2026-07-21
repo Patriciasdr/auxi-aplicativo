@@ -5,10 +5,11 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
-import { atualizarStatusReserva, buscarEspacosReservas, criarEspaco, criarReserva, listarReservasDoEspaco } from '../services/api'; 
+import { atualizarStatusReserva, bloquearDataEspaco, buscarEspacosReservas, criarEspaco, criarReserva, desbloquearDataEspaco, listarBloqueiosEspaco, listarReservasDoEspaco } from '../services/api';
 import { formatarMoeda } from '../utils/formatters';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { normalizarPapel } from '../config/modules';
 
 interface EspacoProps {
   id: string;
@@ -17,6 +18,7 @@ interface EspacoProps {
   capacidade: string;
   valor: number;
   antecedencia: string;
+  modoAprovacao?: 'automatica' | 'manual' | 'por_inadimplencia';
   icone: string;
   bannerColors: string[];
 }
@@ -26,6 +28,9 @@ export function ReservasScreen() {
   
   
   const isSindico = condominioAtivo?.papel === 'Síndico' || condominioAtivo?.papel === 'Gestor';
+  const papelAtual = normalizarPapel(condominioAtivo?.papel || '');
+  const podeCriarEspaco = papelAtual === 'Administradora';
+  const podeGerenciarBloqueios = podeCriarEspaco || papelAtual === 'Síndico';
 
   const [espacos, setEspacos] = useState<EspacoProps[]>([]);
   const [espacoSelecionado, setEspacoSelecionado] = useState<EspacoProps | null>(null);
@@ -47,6 +52,7 @@ export function ReservasScreen() {
   const [novoEspacoNome, setNovoEspacoNome] = useState('');
   const [novoEspacoCapacidade, setNovoEspacoCapacidade] = useState('');
   const [novoEspacoValor, setNovoEspacoValor] = useState('');
+  const [novoEspacoModoAprovacao, setNovoEspacoModoAprovacao] = useState<'automatica' | 'manual' | 'por_inadimplencia'>('manual');
 
   
   const [reservasCompletas, setReservasCompletas] = useState<any[]>([]);
@@ -55,6 +61,8 @@ export function ReservasScreen() {
   const [approvedDays, setApprovedDays] = useState<number[]>([]);
   const [pendingDays, setPendingDays] = useState<number[]>([]);
   const [blockedDays, setBlockedDays] = useState<number[]>([]);
+  const [closedDays, setClosedDays] = useState<number[]>([]);
+  const [modoBloqueio, setModoBloqueio] = useState(false);
 
   const [dataFoco, setDataFoco] = useState(new Date()); 
   const anoAtual = dataFoco.getFullYear();
@@ -95,7 +103,10 @@ export function ReservasScreen() {
         return;
       }
       try {
-        const reservasRealistas = await listarReservasDoEspaco(espacoSelecionado.id);
+        const [reservasRealistas, bloqueios] = await Promise.all([
+          listarReservasDoEspaco(espacoSelecionado.id),
+          listarBloqueiosEspaco(espacoSelecionado.id)
+        ]);
         setReservasCompletas(reservasRealistas || []);
 
         const aprovados: number[] = [];
@@ -134,6 +145,9 @@ export function ReservasScreen() {
         setApprovedDays(aprovados);
         setPendingDays(pendentes);
         setBlockedDays(bloqueados);
+        setClosedDays((bloqueios || [])
+          .filter(bloqueio => bloqueio.data_bloqueio?.startsWith(`${filtroAno}-${filtroMes}`))
+          .map(bloqueio => Number(bloqueio.data_bloqueio.split('-')[2])));
       } catch (err) {
         console.error("Erro ao sincronizar reservas:", err);
       }
@@ -141,12 +155,48 @@ export function ReservasScreen() {
     carregarReservasDoEspaco();
   }, [espacoSelecionado, dataFoco]);
 
-  const handleDayPress = (dia: number) => {
+  const handleDayPress = async (dia: number) => {
     if (!espacoSelecionado) return;
 
     const diaFormatado = String(dia).padStart(2, '0');
     const mesFormatado = String(mesAtual + 1).padStart(2, '0');
     const dataNoFormatoBanco = `${anoAtual}-${mesFormatado}-${diaFormatado}`;
+
+    if (podeGerenciarBloqueios && modoBloqueio) {
+      if (!token) {
+        Alert.alert('Sessão inválida', 'Entre novamente para gerenciar os bloqueios.');
+        return;
+      }
+      const estaBloqueada = closedDays.includes(dia);
+      try {
+        if (estaBloqueada) {
+          await desbloquearDataEspaco(espacoSelecionado.id, dataNoFormatoBanco, token);
+          setClosedDays(atuais => atuais.filter(item => item !== dia));
+          Alert.alert('Data desbloqueada', 'A data está disponível novamente.');
+        } else {
+          await bloquearDataEspaco(espacoSelecionado.id, dataNoFormatoBanco, 'Bloqueio administrativo', token);
+          setClosedDays(atuais => [...new Set([...atuais, dia])]);
+          Alert.alert('Data bloqueada', 'A data foi bloqueada para reservas.');
+        }
+      } catch (error: any) {
+        console.error('Erro ao atualizar bloqueio do espaço:', error);
+        const mensagem = error.message || error.details || '';
+        Alert.alert(
+          'Erro',
+          mensagem.includes('DATA_POSSUI_RESERVA')
+            ? 'Esta data possui uma reserva pendente ou aprovada e não pode ser bloqueada.'
+            : mensagem.includes('SEM_PERMISSAO')
+              ? 'Seu perfil não possui permissão para bloquear esta data.'
+              : `Não foi possível atualizar o bloqueio desta data.${__DEV__ && mensagem ? `\n${mensagem}` : ''}`
+        );
+      }
+      return;
+    }
+
+    if (closedDays.includes(dia)) {
+      Alert.alert('Data indisponível', 'Este espaço foi bloqueado para reservas nesta data.');
+      return;
+    }
 
     if (blockedDays.includes(dia)) {
       Alert.alert('Indisponível', 'Este espaço está indisponível para reservas nesta data.');
@@ -191,24 +241,33 @@ export function ReservasScreen() {
       const dataEvento = `${ano}-${mes}-${dia}`;
       const periodo = turnoSelecionado === 'manha' ? 'Manhã' : 'Tarde';
       
-      await criarReserva({
+      const statusInicial = await criarReserva({
         espaco_id: espacoSelecionado.id,
         usuario_id: token, 
         data_evento: dataEvento,
         periodo,
         nome_evento: nomeEvento.trim(),
         observacoes: observacoes.trim(),
-        status: 'pendente'
       });
 
-      Alert.alert('Sucesso!', 'Reserva enviada para análise da administração.');
+      Alert.alert(
+        'Sucesso!',
+        statusInicial === 'aprovada'
+          ? 'Reserva aprovada automaticamente conforme a regra do espaço.'
+          : 'Reserva enviada para análise da administração.'
+      );
       setModalVisible(false);
       setNomeEvento(''); setObservacoes('');
-      setPendingDays(prev => [...prev, parseInt(dia, 10)]);
-      setReservasCompletas(prev => [...prev, { data_evento: dataEvento, periodo, status: 'pendente' }]);
+      if (statusInicial === 'aprovada') setApprovedDays(prev => [...prev, parseInt(dia, 10)]);
+      else setPendingDays(prev => [...prev, parseInt(dia, 10)]);
+      setReservasCompletas(prev => [...prev, { data_evento: dataEvento, periodo, status: statusInicial }]);
     } catch (error: any) {
       if (error.message === 'RESERVA_JA_EXISTE') {
         Alert.alert('Turno indisponível', 'Já existe uma reserva para este espaço, data e turno.');
+        return;
+      }
+      if (error.message === 'DATA_BLOQUEADA' || error.message?.includes('DATA_BLOQUEADA')) {
+        Alert.alert('Data indisponível', 'Este espaço foi bloqueado para reservas nesta data.');
         return;
       }
       Alert.alert('Erro', 'Não foi possível registrar reserva.');
@@ -234,6 +293,10 @@ export function ReservasScreen() {
 
   
   const handleCadastrarNovoEspaco = async () => {
+    if (!podeCriarEspaco || !token || !condominioAtivo?.id) {
+      Alert.alert('Acesso negado', 'Somente a administradora pode cadastrar espaços comuns.');
+      return;
+    }
     if (!novoEspacoNome.trim()) {
       Alert.alert('Atenção', 'O nome do espaço é obrigatório.');
       return;
@@ -242,14 +305,15 @@ export function ReservasScreen() {
     try {
       setEnviando(true);
       const data = await criarEspaco({
-        condominio_id: condominioAtivo?.id,
+        condominio_id: condominioAtivo.id,
         nome: novoEspacoNome.trim(),
         responsavel: condominioAtivo?.papel || null,
         capacidade: novoEspacoCapacidade.trim() || null,
         valor: parseFloat(novoEspacoValor) || 0,
         antecedencia: null,
+        modo_aprovacao: novoEspacoModoAprovacao,
         ativo: true
-      });
+      }, token);
 
       const espacoCriado = data as EspacoProps;
       setEspacos(prev => [...prev, espacoCriado]);
@@ -257,7 +321,7 @@ export function ReservasScreen() {
       setModalNovoEspacoVisible(false);
       
       
-      setNovoEspacoNome(''); setNovoEspacoCapacidade(''); setNovoEspacoValor('');
+      setNovoEspacoNome(''); setNovoEspacoCapacidade(''); setNovoEspacoValor(''); setNovoEspacoModoAprovacao('manual');
       Alert.alert('Sucesso', 'O espaço foi criado e já está disponível para os moradores!');
     } catch (error: any) {
       console.error(error);
@@ -309,7 +373,7 @@ export function ReservasScreen() {
             ))}
 
             
-            {isSindico && (
+            {podeCriarEspaco && (
               <TouchableOpacity 
                 style={[styles.espacoBtn, { borderStyle: 'dashed', borderColor: COLORS.greenMain, backgroundColor: 'transparent' }]} 
                 onPress={() => setModalNovoEspacoVisible(true)}
@@ -324,7 +388,7 @@ export function ReservasScreen() {
           <View style={{ padding: 30, alignItems: 'center' }}>
             <Feather name="box" size={40} color={COLORS.grayBorder} style={{ marginBottom: 10 }} />
             <Text style={styles.emptyText}>
-              {isSindico 
+              {podeCriarEspaco
                 ? "Nenhum espaço cadastrado. Toque em '+ Novo Espaço' para adicionar o primeiro." 
                 : "Este condomínio ainda não possui espaços disponíveis para reserva."}
             </Text>
@@ -350,6 +414,25 @@ export function ReservasScreen() {
             </View>
 
             <View style={styles.panel}>
+              {podeGerenciarBloqueios && (
+                <View style={styles.blockModeBar}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.blockModeTitle}>Bloqueio de datas</Text>
+                    <Text style={styles.blockModeText}>
+                      {modoBloqueio ? 'Toque em uma data para bloquear ou desbloquear.' : 'Ative para gerenciar datas indisponíveis.'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.blockModeButton, modoBloqueio && styles.blockModeButtonActive]}
+                    onPress={() => setModoBloqueio(ativo => !ativo)}
+                  >
+                    <Feather name={modoBloqueio ? 'x' : 'lock'} size={13} color={modoBloqueio ? COLORS.white : COLORS.greenMain} />
+                    <Text style={[styles.blockModeButtonText, modoBloqueio && { color: COLORS.white }]}>
+                      {modoBloqueio ? 'Concluir' : 'Gerenciar'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <View style={styles.calHeader}>
                 <TouchableOpacity onPress={handlePrevMonth}><Text style={styles.calArrow}>‹</Text></TouchableOpacity>
                 <Text style={styles.calMonthText}>{nomeMeses[mesAtual]} de {anoAtual}</Text>
@@ -364,7 +447,7 @@ export function ReservasScreen() {
                 {monthDays.map(dia => {
                   const isApproved = approvedDays.includes(dia);
                   const isPending = pendingDays.includes(dia);
-                  const isBlocked = blockedDays.includes(dia);
+                  const isBlocked = blockedDays.includes(dia) || closedDays.includes(dia);
                   const isFree = !isApproved && !isPending && !isBlocked;
 
                   return (
@@ -411,7 +494,7 @@ export function ReservasScreen() {
       </ScrollView>
 
       
-      <Modal visible={modalNovoEspacoVisible} transparent animationType="fade" onRequestClose={() => setModalNovoEspacoVisible(false)}>
+      <Modal visible={modalNovoEspacoVisible && podeCriarEspaco} transparent animationType="fade" onRequestClose={() => setModalNovoEspacoVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalNovoEspacoVisible(false)} disabled={enviando}>
@@ -423,6 +506,26 @@ export function ReservasScreen() {
             <Input label="Nome do espaço" placeholder="Ex: Salão de Festas, Jacuzzi" value={novoEspacoNome} onChangeText={setNovoEspacoNome} editable={!enviando} />
             <Input label="Capacidade" placeholder="Ex: 40 pessoas" value={novoEspacoCapacidade} onChangeText={setNovoEspacoCapacidade} editable={!enviando} />
             <Input label="Valor da Reserva (R$)" placeholder="Ex: 150.00 (Deixe 0 se for grátis)" value={novoEspacoValor} onChangeText={setNovoEspacoValor} keyboardType="numeric" editable={!enviando} />
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Regra de aprovação</Text>
+              {[
+                { value: 'automatica', label: 'Aprovação automática' },
+                { value: 'manual', label: 'Aprovação manual' },
+                { value: 'por_inadimplencia', label: 'Automática para unidade adimplente' }
+              ].map(opcao => (
+                <TouchableOpacity
+                  key={opcao.value}
+                  style={styles.checkRow}
+                  onPress={() => setNovoEspacoModoAprovacao(opcao.value as typeof novoEspacoModoAprovacao)}
+                >
+                  <View style={[styles.checkbox, novoEspacoModoAprovacao === opcao.value && styles.checkboxActive]}>
+                    {novoEspacoModoAprovacao === opcao.value && <Feather name="check" size={12} color={COLORS.white} />}
+                  </View>
+                  <Text style={styles.checkText}>{opcao.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             
             <View style={{ marginTop: 10 }}>
               <Button title={enviando ? "Salvando..." : "Salvar Espaço"} icon="plus" onPress={handleCadastrarNovoEspaco} disabled={enviando} />
@@ -596,6 +699,12 @@ const styles = StyleSheet.create({
   bannerArea: { height: 150, alignItems: 'center', justifyContent: 'center' },
   panelBodyInfo: { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 14 },
   calHeader: { backgroundColor: COLORS.greenMain, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  blockModeBar: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.grayBorder, backgroundColor: COLORS.white },
+  blockModeTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 12, color: COLORS.textDark },
+  blockModeText: { fontFamily: 'Montserrat_400Regular', fontSize: 10.5, lineHeight: 15, color: COLORS.textMuted, marginTop: 2 },
+  blockModeButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: COLORS.greenMain, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  blockModeButtonActive: { backgroundColor: COLORS.greenMain },
+  blockModeButtonText: { fontFamily: 'Montserrat_600SemiBold', fontSize: 11, color: COLORS.greenMain },
   calMonthText: { color: COLORS.white, fontFamily: 'Montserrat_700Bold', fontSize: 13 },
   calArrow: { color: COLORS.white, fontSize: 24, lineHeight: 24, fontWeight: '700', paddingHorizontal: 8 },
   calGrid: { flexDirection: 'row', flexWrap: 'wrap', borderTopWidth: 0.5, borderLeftWidth: 0.5, borderColor: COLORS.grayBorder },

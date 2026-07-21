@@ -81,6 +81,11 @@ export function ContatoCDScreen() {
       return;
     }
 
+    if (!token || !condominioAtivo?.id) {
+      Alert.alert('Erro', 'Sessão inválida. Entre novamente para enviar a mensagem.');
+      return;
+    }
+
     try {
       setEnviando(true);
       Keyboard.dismiss();
@@ -88,7 +93,7 @@ export function ContatoCDScreen() {
       const assuntoFormatado = `[${categoria}] ${titulo.trim()}`;
 
       await enviarMensagemDiretoria({
-        condominio_id: condominioAtivo!.id,
+        condominio_id: condominioAtivo.id,
         remetente_id: token,
         destinatario_papel: destinatario,
         assunto: assuntoFormatado,
@@ -221,7 +226,6 @@ export function ContatoCDScreen() {
                     <View style={[styles.avatar, { backgroundColor: membro.cor || COLORS.greenMain }]}><Text style={styles.avatarTxt}>{membro.iniciais}</Text></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.contactName}>{membro.papel} — {membro.nome}</Text>
-                      <Text style={styles.contactEmail}>{membro.email}</Text>
                     </View>
                   </View>
                 ))}
@@ -330,7 +334,6 @@ const styles = StyleSheet.create({
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   avatarTxt: { color: COLORS.white, fontFamily: 'Montserrat_700Bold', fontSize: 13 },
   contactName: { fontFamily: 'Montserrat_700Bold', fontSize: 12, color: COLORS.textDark },
-  contactEmail: { fontFamily: 'Montserrat_400Regular', fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   formRow2: { flexDirection: 'row', gap: 12, marginBottom: 6 },
   historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.grayBorder },
   historyText: { fontFamily: 'Montserrat_500Medium', fontSize: 12.5, color: COLORS.textDark },

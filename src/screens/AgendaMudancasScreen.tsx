@@ -1,15 +1,16 @@
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert, Keyboard, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
-import { atualizarStatusMudanca, buscarMudancas, criarMudanca, listarMudancas } from '../services/api';
+import { atualizarStatusMudanca, buscarMudancas, criarMudanca, listarMudancas, salvarRegrasMudanca } from '../services/api';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { CustomSelect } from '../components/CustomSelect';
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
 import { AppNavigatorRoutesProps } from '../navigation/types/navigation'; 
+import { normalizarPapel } from '../config/modules';
 
 export function AgendaMudancasScreen() {
   const { condominioAtivo, token } = useAuth();
@@ -17,12 +18,17 @@ export function AgendaMudancasScreen() {
   
   
   const isZelador = condominioAtivo?.papel === 'Zelador';
+  const papelAtual = normalizarPapel(condominioAtivo?.papel || '');
+  const podeConfigurarRegras = papelAtual === 'Síndico' || papelAtual === 'Administradora';
 
   const [regras, setRegras] = useState<any>(null);
+  const [modalRegrasVisible, setModalRegrasVisible] = useState(false);
+  const [regraForm, setRegraForm] = useState({ responsavel: '', antecedencia: '', acesso: '', manhaInicio: '', manhaFim: '', tardeInicio: '', tardeFim: '' });
   
   const [approvedDays, setApprovedDays] = useState<string[]>([]);
   const [pendingDays, setPendingDays] = useState<string[]>([]);
   const [blockedDays, setBlockedDays] = useState<number[]>([]);
+  const [turnosOcupados, setTurnosOcupados] = useState<Record<string, string[]>>({});
   
   const [historico, setHistorico] = useState<any[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -37,12 +43,84 @@ export function AgendaMudancasScreen() {
   
   const [empresa, setEmpresa] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState('');
 
   
   const [dataAtual, setDataAtual] = useState(new Date());
 
   const tiposOpcoes = ['Entrada de mudança', 'Saída de mudança'];
   const diasSemana = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  const horaCurta = (valor?: string | null) => valor ? valor.slice(0, 5) : '--:--';
+
+  const abrirConfiguracaoRegras = () => {
+    setRegraForm({
+      responsavel: regras?.responsavel || '',
+      antecedencia: regras?.antecedencia?.split(' ')[0] || '',
+      acesso: regras?.acesso || '',
+      manhaInicio: regras?.manhaInicio ? horaCurta(regras.manhaInicio) : '',
+      manhaFim: regras?.manhaFim ? horaCurta(regras.manhaFim) : '',
+      tardeInicio: regras?.tardeInicio ? horaCurta(regras.tardeInicio) : '',
+      tardeFim: regras?.tardeFim ? horaCurta(regras.tardeFim) : ''
+    });
+    setModalRegrasVisible(true);
+  };
+
+  const handleSalvarRegras = async () => {
+    if (!condominioAtivo?.id || Object.values(regraForm).some(valor => !valor.trim())) {
+      Alert.alert('Atenção', 'Preencha todos os campos da regra.');
+      return;
+    }
+    const normalizarHorario = (valor: string) => {
+      const correspondencia = valor.trim().toLowerCase().match(/^(\d{1,2})(?:(?::|h)(\d{0,2}))?$/);
+      if (!correspondencia) return null;
+      const hora = Number(correspondencia[1]);
+      const minuto = Number(correspondencia[2] || 0);
+      if (hora > 23 || minuto > 59) return null;
+      return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+    };
+    const turnoManha = { inicio: normalizarHorario(regraForm.manhaInicio), fim: normalizarHorario(regraForm.manhaFim) };
+    const turnoTarde = { inicio: normalizarHorario(regraForm.tardeInicio), fim: normalizarHorario(regraForm.tardeFim) };
+    const antecedenciaHoras = Number(regraForm.antecedencia);
+    if (!turnoManha.inicio || !turnoManha.fim || !turnoTarde.inicio || !turnoTarde.fim) {
+      Alert.alert('Horário inválido', 'Preencha os quatro horários no formato HH:MM.');
+      return;
+    }
+    if (turnoManha.inicio >= turnoManha.fim || turnoTarde.inicio >= turnoTarde.fim) {
+      Alert.alert('Horário inválido', 'O horário final de cada turno deve ser posterior ao horário inicial.');
+      return;
+    }
+    if (!Number.isFinite(antecedenciaHoras) || antecedenciaHoras < 0) {
+      Alert.alert('Antecedência inválida', 'Informe a antecedência em horas usando somente números.');
+      return;
+    }
+    try {
+      setEnviando(true);
+      await salvarRegrasMudanca(condominioAtivo.id, {
+        responsavel: regraForm.responsavel.trim(),
+        horario_geral: `${turnoManha.inicio} às ${turnoTarde.fim}`,
+        antecedencia_horas: antecedenciaHoras,
+        acesso: regraForm.acesso.trim(),
+        manha_inicio: turnoManha.inicio,
+        manha_fim: turnoManha.fim,
+        tarde_inicio: turnoTarde.inicio,
+        tarde_fim: turnoTarde.fim
+      });
+      setModalRegrasVisible(false);
+      await carregarDadosMudanca();
+      Alert.alert('Sucesso', 'As regras de mudança foram atualizadas.');
+    } catch (error: any) {
+      console.error('Erro ao salvar regras de mudança:', error);
+      const detalhe = error?.message || error?.details || '';
+      Alert.alert(
+        'Erro ao salvar',
+        detalhe.includes('regras_mudanca') && detalhe.includes('schema cache')
+          ? 'A tabela de regras ainda não existe no Supabase. Execute a migração indicada.'
+          : `Não foi possível salvar as regras.${__DEV__ && detalhe ? `\n${detalhe}` : ''}`
+      );
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   async function carregarDadosMudanca() {
     if (!condominioAtivo?.id) return;
@@ -57,6 +135,7 @@ export function AgendaMudancasScreen() {
       const aprovadas: string[] = [];
       const pendentes: string[] = [];
       const listaHistorico: any[] = [];
+      const ocupados: Record<string, string[]> = {};
 
       (mudancasReais || []).forEach(m => {
         const statusLower = m.status?.toLowerCase();
@@ -67,6 +146,10 @@ export function AgendaMudancasScreen() {
             aprovadas.push(dataApenasYMD);
           } else if (statusLower === 'pendente') {
             pendentes.push(dataApenasYMD);
+          }
+
+          if (['pendente', 'aprovada', 'aprovado'].includes(statusLower)) {
+            ocupados[dataApenasYMD] = [...(ocupados[dataApenasYMD] || []), m.periodo];
           }
         }
 
@@ -79,6 +162,7 @@ export function AgendaMudancasScreen() {
             data: `${dia}/${mes}/${ano}`,
             tipo: m.tipo,
             complemento: m.empresa || '',
+            periodo: m.periodo,
             status: m.status
           };
 
@@ -93,6 +177,7 @@ export function AgendaMudancasScreen() {
       setApprovedDays(aprovadas);
       setPendingDays(pendentes);
       setHistorico(listaHistorico);
+      setTurnosOcupados(ocupados);
 
     } catch (error) {
       console.error('Erro ao carregar agenda de mudanças:', error);
@@ -143,6 +228,11 @@ export function AgendaMudancasScreen() {
       return;
     }
 
+    if (!regras) {
+      Alert.alert('Configuração pendente', 'As regras de mudança deste condomínio ainda não foram cadastradas.');
+      return;
+    }
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dataEscolhida = new Date(anoStr, mesIdx, dia);
@@ -156,24 +246,31 @@ export function AgendaMudancasScreen() {
     const mesFormatado = String(mesIdx + 1).padStart(2, '0');
     const dataDia = `${anoStr}-${mesFormatado}-${diaFormatado}`;
 
-    if (blockedDays.includes(dia) || approvedDays.includes(dataDia) || pendingDays.includes(dataDia)) {
-      Alert.alert('Dia indisponível', 'Já existe um agendamento solicitado ou aprovado para esta data.');
+    const ocupados = turnosOcupados[dataDia] || [];
+    const manhaOcupada = ocupados.includes('Manhã');
+    const tardeOcupada = ocupados.includes('Tarde');
+    if (blockedDays.includes(dia) || (manhaOcupada && tardeOcupada)) {
+      Alert.alert('Dia indisponível', 'Os turnos da manhã e da tarde já estão ocupados nesta data.');
       return;
     }
     
     setDataSelecionada(`${diaFormatado}/${mesFormatado}/${anoStr}`);
     setTipoAberto(false);
     setEmpresa('');
+    setTurnoSelecionado(manhaOcupada ? 'tarde' : 'manha');
     setModalVisible(true);
   };
 
   const enviarMudanca = async () => {
+    setErroEnvio('');
     if (!token) {
+      setErroEnvio('Sua sessão expirou. Refaça o login.');
       Alert.alert('Erro', 'Sua sessão expirou. Refaça o login.');
       return;
     }
 
     if (!condominioAtivo?.id) {
+      setErroEnvio('Condomínio ativo não identificado.');
       Alert.alert('Erro', 'Condomínio ativo não identificado.');
       return;
     }
@@ -185,6 +282,20 @@ export function AgendaMudancasScreen() {
       const [dia, mes, ano] = dataSelecionada.split('/');
       const dataFormatadaBanco = `${ano}-${mes}-${dia}`;
       const periodoFormatado = turnoSelecionado === 'manha' ? 'Manhã' : 'Tarde';
+      const inicioTurno = turnoSelecionado === 'manha' ? regras?.manhaInicio : regras?.tardeInicio;
+      if (!inicioTurno) {
+        setErroEnvio('O horário deste turno ainda não foi configurado.');
+        Alert.alert('Configuração pendente', 'O horário deste turno ainda não foi configurado.');
+        return;
+      }
+      const [hora, minuto] = inicioTurno.split(':').map(Number);
+      const dataHoraMudanca = new Date(Number(ano), Number(mes) - 1, Number(dia), hora, minuto);
+      const antecedenciaMs = Number(regras?.antecedencia?.split(' ')[0] || 0) * 60 * 60 * 1000;
+      if (dataHoraMudanca.getTime() < Date.now() + antecedenciaMs) {
+        setErroEnvio(`Escolha uma data que respeite a antecedência mínima de ${regras?.antecedencia}.`);
+        Alert.alert('Antecedência insuficiente', `Esta solicitação exige antecedência mínima de ${regras?.antecedencia}.`);
+        return;
+      }
 
       await criarMudanca({
             condominio_id: condominioAtivo.id,
@@ -198,13 +309,21 @@ export function AgendaMudancasScreen() {
           });
 
       Alert.alert('Solicitação enviada', 'Sua solicitação de mudança foi enviada para aprovação do zelador.');
+      setErroEnvio('');
       setModalVisible(false);
       
       await carregarDadosMudanca();
 
     } catch (error: any) {
       console.error("Erro ao registrar mudança no banco:", error.message);
-      Alert.alert('Erro', 'Não foi possível agendar sua mudança. Tente novamente.');
+      const mensagemErro = error.message === 'TURNO_MUDANCA_INDISPONIVEL'
+        ? 'O turno escolhido já possui uma solicitação pendente ou aprovada.'
+        : `Não foi possível agendar a mudança.${__DEV__ && error.message ? ` ${error.message}` : ''}`;
+      setErroEnvio(mensagemErro);
+      Alert.alert(
+        'Erro',
+        mensagemErro
+      );
     } finally {
       setEnviando(false);
     }
@@ -251,7 +370,9 @@ export function AgendaMudancasScreen() {
               const isApproved = approvedDays.includes(dataDia);
               const isPending = pendingDays.includes(dataDia);
               const isBlocked = blockedDays.includes(dia);
-              const isFree = !isApproved && !isPending && !isBlocked;
+              const ocupados = turnosOcupados[dataDia] || [];
+              const isFull = ocupados.includes('Manhã') && ocupados.includes('Tarde');
+              const isFree = !isFull && !isBlocked;
               
               const hoje = new Date();
               hoje.setHours(0, 0, 0, 0);
@@ -265,7 +386,7 @@ export function AgendaMudancasScreen() {
                     styles.calDay, 
                     isApproved && !isPast && styles.dayApproved, 
                     isPending && !isPast && styles.dayPending, 
-                    (isBlocked || isPast) && styles.dayBlocked, 
+                    (isBlocked || isPast || isFull) && styles.dayBlocked,
                     isFree && !isPast && styles.dayFree
                   ]}
                   activeOpacity={(isFree && !isPast && !isZelador) ? 0.6 : 1}
@@ -275,7 +396,7 @@ export function AgendaMudancasScreen() {
                     styles.calDayText, 
                     isApproved && !isPast && styles.dayApprovedText, 
                     isPending && !isPast && styles.dayPendingText, 
-                    (isBlocked || isPast) && styles.dayBlockedText
+                    (isBlocked || isPast || isFull) && styles.dayBlockedText
                   ]}>
                     {dia}
                   </Text>
@@ -293,16 +414,24 @@ export function AgendaMudancasScreen() {
 
         <View style={styles.panel}>
           <View style={styles.panelHead}>
-            <View style={styles.sectionTab}><Text style={styles.sectionTabText}>Regras e Orientações</Text></View>
+            <View style={styles.rulesHeaderRow}>
+              <View style={styles.sectionTab}><Text style={styles.sectionTabText}>Regras e Orientações</Text></View>
+              {podeConfigurarRegras && (
+                <TouchableOpacity style={styles.editRulesButton} onPress={abrirConfiguracaoRegras}>
+                  <Feather name="edit-2" size={12} color={COLORS.greenMain} />
+                  <Text style={styles.editRulesText}>{regras ? 'Editar' : 'Configurar'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           <View style={styles.panelBodyInfo}>
             <View style={styles.infoGridRow}>
-              <Info icon="user" label="Responsável" value={regras?.responsavel || 'Zelador'} />
-              <Info icon="clock" label="Horário" value={regras?.horario || '08h - 18h'} />
+              <Info icon="user" label="Responsável" value={regras?.responsavel || 'Não configurado'} />
+              <Info icon="clock" label="Turnos" value={regras ? `Manhã ${horaCurta(regras.manhaInicio)}–${horaCurta(regras.manhaFim)} / Tarde ${horaCurta(regras.tardeInicio)}–${horaCurta(regras.tardeFim)}` : 'Não configurados'} />
             </View>
             <View style={[styles.infoGridRow, { marginTop: 14 }]}>
-              <Info icon="calendar" label="Antecedência" value={regras?.antecedencia || '48 horas'} />
-              <Info icon="truck" label="Acesso" value={regras?.acesso || 'Pela garagem'} />
+              <Info icon="calendar" label="Antecedência" value={regras?.antecedencia || 'Não configurada'} />
+              <Info icon="truck" label="Acesso" value={regras?.acesso || 'Não configurado'} />
             </View>
           </View>
         </View>
@@ -325,7 +454,7 @@ export function AgendaMudancasScreen() {
                     
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                       <Text style={styles.saldoRowText}>
-                        {isZelador ? `Ap. ${item.unidade} - ` : ''}{item.data} - {item.tipo} {item.complemento ? `- ${item.complemento}` : ''}
+                        {isZelador ? `Ap. ${item.unidade} - ` : ''}{item.data} - {item.periodo} - {item.tipo} {item.complemento ? `- ${item.complemento}` : ''}
                       </Text>
                       <View style={isAprovado ? styles.badgeAprovado : isRecusado ? styles.badgeRecusado : styles.badgePendente}>
                         <Text style={isAprovado ? styles.badgeAprovadoText : isRecusado ? styles.badgeRecusadoText : styles.badgePendenteText}>
@@ -388,8 +517,8 @@ export function AgendaMudancasScreen() {
 
             <View style={[styles.formGroup, { zIndex: 1 }]}>
               <Text style={styles.formLabel}>Horário</Text>
-              <TurnoOption label="Manhã - 08:00 às 12:00" value="manha" selected={turnoSelecionado} onSelect={setTurnoSelecionado} />
-              <TurnoOption label="Tarde - 13:00 às 18:00" value="tarde" selected={turnoSelecionado} onSelect={setTurnoSelecionado} />
+              <TurnoOption label={`Manhã - ${horaCurta(regras?.manhaInicio)} às ${horaCurta(regras?.manhaFim)}`} value="manha" selected={turnoSelecionado} onSelect={setTurnoSelecionado} disabled={turnosOcupados[dataSelecionada.split('/').reverse().join('-')]?.includes('Manhã')} />
+              <TurnoOption label={`Tarde - ${horaCurta(regras?.tardeInicio)} às ${horaCurta(regras?.tardeFim)}`} value="tarde" selected={turnoSelecionado} onSelect={setTurnoSelecionado} disabled={turnosOcupados[dataSelecionada.split('/').reverse().join('-')]?.includes('Tarde')} />
             </View>
 
             <Input 
@@ -406,7 +535,39 @@ export function AgendaMudancasScreen() {
               onPress={enviarMudanca} 
               disabled={enviando}
             />
+            {!!erroEnvio && <Text style={styles.formError}>{erroEnvio}</Text>}
           </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalRegrasVisible} transparent animationType="fade" onRequestClose={() => setModalRegrasVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            <View style={styles.modalCard}>
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalRegrasVisible(false)} disabled={enviando}>
+                <Text style={styles.modalCloseBtnText}>×</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Configurar regras de mudança</Text>
+              <Input label="Responsável" placeholder="Ex: Zelador" value={regraForm.responsavel} onChangeText={valor => setRegraForm(atual => ({ ...atual, responsavel: valor }))} />
+              <Input label="Antecedência mínima (horas)" placeholder="Ex: 48" keyboardType="numeric" value={regraForm.antecedencia} onChangeText={valor => setRegraForm(atual => ({ ...atual, antecedencia: valor }))} />
+              <Input label="Acesso" placeholder="Ex: Elevador de serviço" value={regraForm.acesso} onChangeText={valor => setRegraForm(atual => ({ ...atual, acesso: valor }))} />
+              <HorarioIntervalo
+                label="Horário da manhã"
+                inicio={regraForm.manhaInicio}
+                fim={regraForm.manhaFim}
+                onInicio={valor => setRegraForm(atual => ({ ...atual, manhaInicio: valor }))}
+                onFim={valor => setRegraForm(atual => ({ ...atual, manhaFim: valor }))}
+              />
+              <HorarioIntervalo
+                label="Horário da tarde"
+                inicio={regraForm.tardeInicio}
+                fim={regraForm.tardeFim}
+                onInicio={valor => setRegraForm(atual => ({ ...atual, tardeInicio: valor }))}
+                onFim={valor => setRegraForm(atual => ({ ...atual, tardeFim: valor }))}
+              />
+              <Button title={enviando ? 'Salvando...' : 'Salvar regras'} onPress={handleSalvarRegras} disabled={enviando} />
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -422,6 +583,34 @@ function Info({ icon, label, value }: { icon: any; label: string; value: string 
   );
 }
 
+function HorarioIntervalo({ label, inicio, fim, onInicio, onFim }: {
+  label: string;
+  inicio: string;
+  fim: string;
+  onInicio: (valor: string) => void;
+  onFim: (valor: string) => void;
+}) {
+  const aplicarMascara = (valor: string) => {
+    const numeros = valor.replace(/\D/g, '').slice(0, 4);
+    if (numeros.length <= 2) return numeros;
+    if (numeros.length === 3 && Number(numeros.slice(0, 2)) > 23) {
+      return `0${numeros[0]}:${numeros.slice(1)}`;
+    }
+    return `${numeros.slice(0, 2)}:${numeros.slice(2)}`;
+  };
+
+  return (
+    <View style={styles.scheduleGroup}>
+      <Text style={styles.formLabel}>{label}</Text>
+      <View style={styles.scheduleRow}>
+        <TextInput style={styles.scheduleInput} keyboardType="number-pad" maxLength={5} placeholder="08:00" value={inicio} onChangeText={valor => onInicio(aplicarMascara(valor))} />
+        <Text style={styles.scheduleUntil}>até</Text>
+        <TextInput style={styles.scheduleInput} keyboardType="number-pad" maxLength={5} placeholder="12:00" value={fim} onChangeText={valor => onFim(aplicarMascara(valor))} />
+      </View>
+    </View>
+  );
+}
+
 function LegendItem({ color, text }: { color: string; text: string }) {
   return (
     <View style={styles.calLegendItem}>
@@ -431,14 +620,14 @@ function LegendItem({ color, text }: { color: string; text: string }) {
   );
 }
 
-function TurnoOption({ label, value, selected, onSelect }: { label: string; value: string; selected: string; onSelect: (value: string) => void }) {
+function TurnoOption({ label, value, selected, onSelect, disabled = false }: { label: string; value: string; selected: string; onSelect: (value: string) => void; disabled?: boolean }) {
   const active = selected === value;
   return (
-    <TouchableOpacity style={styles.checkRow} onPress={() => onSelect(value)} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.checkRow, disabled && { opacity: 0.45 }]} onPress={() => onSelect(value)} activeOpacity={0.8} disabled={disabled}>
       <View style={[styles.checkbox, active && styles.checkboxActive]}>
         {active && <Feather name="check" size={12} color={COLORS.white} />}
       </View>
-      <Text style={styles.checkText}>{label}</Text>
+      <Text style={styles.checkText}>{label}{disabled ? ' — indisponível' : ''}</Text>
     </TouchableOpacity>
   );
 }
@@ -476,6 +665,13 @@ const styles = StyleSheet.create({
   calLegendText: { fontFamily: 'Montserrat_400Regular', fontSize: 11.5, color: COLORS.textMuted },
   sectionTab: { borderLeftWidth: 3, borderLeftColor: COLORS.greenMain, paddingLeft: 10, marginVertical: 4, marginBottom: 12 },
   sectionTabText: { fontFamily: 'Montserrat_700Bold', fontSize: 13, color: COLORS.textDark },
+  rulesHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  editRulesButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.greenMain, borderRadius: 7, marginBottom: 8 },
+  editRulesText: { fontFamily: 'Montserrat_600SemiBold', fontSize: 10.5, color: COLORS.greenMain },
+  scheduleGroup: { marginBottom: 16 },
+  scheduleRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  scheduleInput: { flex: 1, minWidth: 0, maxWidth: '43%', borderWidth: 1.6, borderColor: '#d7e0da', borderRadius: 11, backgroundColor: '#fcfdfc', paddingVertical: 11, paddingHorizontal: 6, textAlign: 'center', fontFamily: 'Montserrat_500Medium', fontSize: 14, color: COLORS.textDark },
+  scheduleUntil: { flexShrink: 0, width: '12%', textAlign: 'center', fontFamily: 'Montserrat_600SemiBold', fontSize: 11, color: COLORS.textMuted },
   infoGridRow: { flexDirection: 'row', justifyContent: 'space-between' },
   infoGridCol: { width: '48%' },
   infoKey: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
@@ -498,7 +694,7 @@ const styles = StyleSheet.create({
   btnRefuseText: { color: '#c62828', fontFamily: 'Montserrat_600SemiBold', fontSize: 12 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 400 },
-  modalCard: { backgroundColor: COLORS.white, borderRadius: 16, marginHorizontal: 14, marginTop: 80, paddingHorizontal: 18, paddingVertical: 22, position: 'relative' },
+  modalCard: { width: '92%', maxWidth: 520, alignSelf: 'center', backgroundColor: COLORS.white, borderRadius: 16, paddingHorizontal: 18, paddingVertical: 22, position: 'relative' },
   modalCloseBtn: { position: 'absolute', top: 14, right: 16, zIndex: 50 },
   modalCloseBtnText: { color: COLORS.greenMain, fontSize: 20, fontFamily: 'Montserrat_700Bold' },
   modalTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 17, color: COLORS.textDark, marginBottom: 18, paddingRight: 24 },
@@ -511,4 +707,5 @@ const styles = StyleSheet.create({
   checkboxActive: { backgroundColor: COLORS.greenMain, borderColor: COLORS.greenMain },
   checkText: { fontFamily: 'Montserrat_400Regular', fontSize: 12.5, color: COLORS.textDark },
   emptyText: { fontFamily: 'Montserrat_400Regular', fontSize: 12, color: COLORS.textMuted, textAlign: 'center', paddingVertical: 10 },
+  formError: { fontFamily: 'Montserrat_500Medium', fontSize: 11.5, lineHeight: 16, color: COLORS.red, marginTop: 10, textAlign: 'center' },
 });

@@ -48,3 +48,5 @@ yarn-error.*
 .claude/
 .codex/
 .agents/
+AGENTS.md
+CLAUDE.md

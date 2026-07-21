@@ -1,6 +1,6 @@
 # Auxiliadora Digital
 
-Aplicativo mobile para gestão e comunicação condominial. O projeto centraliza serviços como boletos, comunicados, agenda, reservas de espaços, mudanças, reparos e contato com o corpo diretivo.
+Aplicativo mobile para gestão e comunicação condominial. O projeto centraliza serviços como boletos, comunicados, notificações internas, agenda, reservas de espaços, mudanças, reparos e contato com o corpo diretivo.
 
 Desenvolvido com Expo SDK 54, React Native, TypeScript e Supabase.
 
@@ -9,14 +9,17 @@ Desenvolvido com Expo SDK 54, React Native, TypeScript e Supabase.
 - Autenticação por CPF e senha
 - Seleção de condomínio, unidade e perfil de acesso
 - Persistência segura da sessão no dispositivo
-- Consulta de boletos e simulação de segunda via com juros
+- Consulta de boletos e simulação de segunda via conforme a regra de cobrança de cada condomínio
 - Dashboard financeiro
-- Publicação e leitura de circulares
-- Agenda de eventos do condomínio
-- Reserva e administração de espaços comuns
-- Solicitação e aprovação de mudanças
+- Publicação e leitura de circulares nas categorias Aviso, Manutenção e Informação
+- Agenda de eventos do condomínio com notificações aos destinatários
+- Notificações internas persistentes, contador de não lidas e atualização em tempo real
+- Reserva de espaços por turno, com aprovação automática, manual ou condicionada à inadimplência
+- Cadastro de espaços pela administradora e bloqueio de datas pelo síndico ou administradora
+- Solicitação e aprovação de mudanças por turno
+- Regras de mudança configuráveis por condomínio
 - Abertura e acompanhamento de reparos
-- Comunicação entre moradores e corpo diretivo
+- Comunicação entre moradores e corpo diretivo sem exposição dos e-mails dos membros
 - Controle de funcionalidades conforme o perfil do usuário
 
 ## Tecnologias
@@ -105,9 +108,23 @@ O aplicativo utiliza as seguintes tabelas no Supabase:
 - `eventos`
 - `espacos`
 - `reservas`
+- `bloqueios_espacos`
 - `mudancas`
+- `regras_mudanca`
 - `reparos`
 - `mensagens_diretoria`
+- `notificacoes`
+
+O banco utilizado no ambiente atual contém, entre outros recursos:
+
+- notificações integradas aos principais fluxos;
+- regras de cobrança configuráveis por condomínio;
+- modos de aprovação das reservas;
+- proteção contra reservas concorrentes;
+- bloqueios de datas específicas dos espaços;
+- regras e horários de mudança por condomínio.
+
+Antes de configurar outro ambiente Supabase, as alterações SQL devem ser formalizadas e versionadas como migrações, executadas na ordem e validadas com os dados existentes.
 
 As políticas de Row Level Security (RLS) devem garantir o isolamento dos dados por usuário, condomínio, unidade e perfil. As restrições aplicadas pela interface não substituem a segurança no banco.
 
@@ -117,4 +134,12 @@ Consulte [DOCUMENTACAO.md](./DOCUMENTACAO.md) para conhecer as regras de negóci
 
 ## Status
 
-Projeto privado em desenvolvimento. Alguns recursos exibidos no catálogo do aplicativo ainda são demonstrativos ou estão planejados para versões futuras.
+Projeto privado em desenvolvimento. Os fluxos principais usam dados reais do Supabase; não são dados fixos no código. Alguns recursos exibidos no catálogo ainda são demonstrativos ou estão planejados para versões futuras.
+
+Limitações atuais importantes:
+
+- as notificações são internas e ainda não funcionam como push nativo com o aplicativo fechado;
+- as regras de cobrança estão preparadas por condomínio, mas a sincronização real com o ERP ainda não foi implementada;
+- a segunda via ainda não emite cobrança bancária real;
+- os indicadores financeiros não são atualizados automaticamente durante uma sessão aberta;
+- anexos de reparos, Supabase Auth/JWT, políticas RLS completas e testes automatizados ainda são evoluções pendentes.

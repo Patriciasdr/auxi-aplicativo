@@ -29,19 +29,19 @@ export const MODULOS: ModuloApp[] = [
   { g: 'Imóveis', key: 'gerente', nome: 'Meu Gerente de Contas', desc: 'Contato do gerente responsável', ic: 'star', stub: true, roles: ['Proprietário', 'Gerente', 'Gestor'] },
 
   { g: 'Comunicação', key: 'circulares', nome: 'Circulares', desc: 'Comunicados do condomínio', ic: 'volume-2', route: 'Circulares', roles: ['Síndico', 'Conselheiro', 'Gestor', 'Morador', 'Proprietário'] },
-  { g: 'Comunicação', key: 'contato-cd', nome: 'Fale com o Síndico', desc: 'Tickets de comunicação', ic: 'message-square', route: 'ContatoCD', roles: ['Morador', 'Síndico'] },
+  { g: 'Comunicação', key: 'contato-cd', nome: 'Fale com o Corpo diretivo', desc: 'Tickets de comunicação', ic: 'message-square', route: 'ContatoCD', roles: ['Morador', 'Síndico'] },
   
   
   { g: 'Comunicação', key: 'agenda-cond', nome: 'Agenda do Condomínio', desc: 'Calendário de eventos', ic: 'calendar', route: 'AgendaCondominio', roles: ['Morador', 'Síndico', 'Zelador', 'Porteiro'] },
   
-  { g: 'Comunicação', key: 'notificacoes', nome: 'Notificações', desc: 'Central de notificações push', ic: 'bell', stub: true, roles: ['Síndico', 'Proprietário', 'Morador', 'Gestor', 'Gerente', 'Conselheiro', 'Porteiro', 'Zelador'] },
+  { g: 'Comunicação', key: 'notificacoes', nome: 'Notificações', desc: 'Central de avisos do condomínio', ic: 'bell', route: 'Notificacoes', roles: ['Síndico', 'Proprietário', 'Morador', 'Gestor', 'Gerente', 'Conselheiro', 'Porteiro', 'Zelador'] },
   { g: 'Comunicação', key: 'fale-conosco', nome: 'Fale Conosco', desc: 'Suporte por e-mail', ic: 'headphones', stub: true, roles: ['Síndico', 'Proprietário', 'Morador', 'Gestor', 'Gerente', 'Conselheiro', 'Porteiro', 'Zelador'] },
 
-  { g: 'Operação e Acesso', key: 'reservas', nome: 'Reserva de Espaços', desc: 'Reservar áreas comuns', ic: 'calendar', route: 'Reservas', roles: ['Morador', 'Síndico'] },
-  { g: 'Operação e Acesso', key: 'agenda-mud', nome: 'Agenda de Mudanças', desc: 'Autorização de entrada/saída', ic: 'truck', route: 'AgendaMudancas', roles: ['Morador', 'Síndico', 'Zelador'] },
+  { g: 'Operação e Acesso', key: 'reservas', nome: 'Reserva de Espaços', desc: 'Reservar áreas comuns', ic: 'calendar', route: 'Reservas', roles: ['Morador', 'Síndico', 'Gestor', 'Administradora'] },
+  { g: 'Operação e Acesso', key: 'agenda-mud', nome: 'Agenda de Mudanças', desc: 'Autorização de entrada/saída', ic: 'truck', route: 'AgendaMudancas', roles: ['Morador', 'Síndico', 'Zelador', 'Administradora'] },
   { g: 'Operação e Acesso', key: 'portaria', nome: 'Painel da Portaria', desc: 'Entradas, saídas, visitas, entregas', ic: 'package', stub: true, roles: ['Porteiro', 'Síndico', 'Zelador'] }, 
   { g: 'Operação e Acesso', key: 'consumo', nome: 'Controle de Consumo', desc: 'Leitura de água e gás', ic: 'droplet', stub: true, roles: ['Zelador', 'Síndico'] },
-  { g: 'Operação e Acesso', key: 'reparos', nome: 'Manutenção e Reparos', desc: 'Solicitar e acompanhar reparos', ic: 'tool', route: 'Reparos', roles: ['Síndico', 'Zelador'] },
+  { g: 'Operação e Acesso', key: 'reparos', nome: 'Manutenção e Reparos', desc: 'Solicitar e acompanhar reparos', ic: 'tool', route: 'Reparos', roles: ['Síndico', 'Morador', 'Proprietário', 'Zelador'] },
 
   { g: 'Documentos e RH', key: 'documentos', nome: 'Documentos Digitalizados', desc: 'Upload e download de documentos', ic: 'folder', stub: true, roles: ['Síndico', 'Proprietário', 'Morador', 'Gestor', 'Gerente', 'Conselheiro', 'Porteiro', 'Zelador'] },
   { g: 'Documentos e RH', key: 'dp', nome: 'Departamento Pessoal', desc: 'Admissão, frequência, férias', ic: 'users', stub: true, roles: ['Gestor', 'Síndico', 'Gestor de RH'] },

@@ -55,29 +55,9 @@ const obterAnoEMes = (dataString: string) => {
   return { ano, mes };
 };
 
-const obterStatusReal = (boleto: BoletoProps): string => {
-  if (boleto.status === 'pago') return 'pago';
-  
-  let ano, mes, dia;
-  const dataString = boleto.vencto;
-  if (!dataString) return 'a_vencer';
-
-  if (dataString.includes('-')) {
-    [ano, mes, dia] = dataString.split('-');
-  } else {
-    [dia, mes, ano] = dataString.split('/');
-  }
-
-  const dataVencimento = new Date(Number(ano), Number(mes) - 1, Number(dia));
-  const dataHoje = new Date(); 
-
-  dataVencimento.setHours(0, 0, 0, 0);
-  dataHoje.setHours(0, 0, 0, 0);
-
-  const diferencaTempo = dataHoje.getTime() - dataVencimento.getTime();
-  const diasReais = Math.floor(diferencaTempo / (1000 * 3600 * 24));
-
-  return diasReais > 0 ? 'vencido' : 'a_vencer';
+const obterStatusErp = (boleto: BoletoProps): string => {
+  // "pendente" é o status legado equivalente a "a vencer".
+  return boleto.status === 'pendente' ? 'a_vencer' : boleto.status;
 };
 
 export function BoletosScreen() {
@@ -155,7 +135,7 @@ export function BoletosScreen() {
       filtrados = filtrados.filter(b => obterAnoEMes(b.vencto).mes === filtroMes);
     }
     if (filtroStatus !== 'Todos') {
-      filtrados = filtrados.filter(b => obterStatusReal(b) === filtroStatus);
+      filtrados = filtrados.filter(b => obterStatusErp(b) === filtroStatus);
     }
 
     setBoletos(filtrados);

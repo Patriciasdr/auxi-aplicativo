@@ -5,10 +5,12 @@ import { RootStackParamList } from '../navigation/types/navigation';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { formatarMoeda } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 type JuridicoRouteProp = RouteProp<RootStackParamList, 'Juridico'>;
 
 export function JuridicoScreen() {
+  const { condominioAtivo } = useAuth();
 
   const route = useRoute<JuridicoRouteProp>();
   
@@ -36,9 +38,9 @@ export function JuridicoScreen() {
         <View style={styles.alertBox}>
           <Feather name="alert-circle" size={22} color="#e65100" style={styles.alertIcon} />
           <View style={styles.alertRightContent}>
-            <Text style={styles.alertTitle}>Este débito excede 60 dias de atraso</Text>
+            <Text style={styles.alertTitle}>Este débito atingiu o prazo para cobrança jurídica</Text>
             <Text style={styles.alertText}>
-              Boletos com mais de 60 dias de vencimento não podem ser emitidos diretamente pelo aplicativo. 
+              Conforme a regra deste condomínio, boletos com {condominioAtivo?.diasJuridico} dias ou mais de atraso não podem ser emitidos diretamente pelo aplicativo.
               Entre em contato com o setor jurídico para regularizar sua situação.
             </Text>
             

@@ -2,7 +2,7 @@
 
 ## Documento funcional para Product Owner
 
-**Atualizado em:** 15/07/2026  
+**Atualizado em:** 21/07/2026<br>
 **Produto:** aplicativo móvel para operação e comunicação condominial  
 **Plataforma:** Expo / React Native com Supabase
 
@@ -20,12 +20,13 @@ Nesta versão, os fluxos principais já consultam e gravam dados no Supabase: au
 | Home e perfil | Funcionando | Ver identificação, papel, condomínio ativo, atalhos e, para perfis administrativos, o resumo financeiro. |
 | Boletos | Funcionando | Consultar boletos do condomínio/unidade, filtrar e visualizar ações de 2ª via ou jurídico conforme atraso. |
 | Dashboard | Funcionando | Consultar receitas e despesas dos últimos meses, além dos indicadores financeiros disponíveis. |
-| Circulares | Funcionando | Ler comunicados; síndico e conselheiro podem publicar novos avisos. |
+| Circulares | Funcionando | Ler comunicados; síndico e conselheiro podem publicar novos avisos, gerando notificações aos destinatários. |
 | Agenda do condomínio | Funcionando | Consultar eventos; síndico administra eventos publicados. |
-| Reservas | Funcionando | Consultar espaços, reservar por turno, acompanhar disponibilidade e, para síndico/gestor, aprovar ou recusar solicitações. |
-| Agenda de mudanças | Funcionando | Solicitar mudança; zelador aprova ou recusa solicitações. |
+| Reservas | Funcionando | Consultar espaços, reservar por turno, acompanhar disponibilidade, bloquear datas autorizadas e analisar pedidos conforme a configuração do espaço. |
+| Agenda de mudanças | Funcionando | Solicitar mudança; zelador aprova ou recusa solicitações, e síndico/administradora configuram as regras do condomínio. |
 | Reparos | Funcionando | Síndico abre solicitações; zelador atualiza o andamento. |
 | Fale com o Corpo Diretivo | Funcionando | Morador envia e acompanha mensagens; diretoria responde mensagens destinadas ao seu papel. |
+| Notificações internas | Funcionando | Receber avisos persistentes dos fluxos integrados, consultar histórico e marcar uma ou todas como lidas. |
 
 Os módulos indicados como **“disponíveis apenas no app completo”** no menu são itens de catálogo futuro e não fazem parte deste escopo entregue.
 
@@ -48,7 +49,7 @@ Os módulos indicados como **“disponíveis apenas no app completo”** no menu
 
 ## 4. Perfis e visibilidade
 
-O menu é montado conforme o papel salvo no vínculo entre usuário e condomínio. A tabela abaixo descreve a visibilidade atual na interface.
+O menu é montado conforme o papel salvo no vínculo entre usuário e condomínio. Um usuário pode possuir mais de um vínculo e atuar, por exemplo, como zelador e administradora, selecionando o papel desejado no acesso. A tabela abaixo descreve a visibilidade atual na interface.
 
 | Funcionalidade | Quem visualiza | Quem executa ações de gestão |
 | --- | --- | --- |
@@ -57,10 +58,11 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 | Dashboard gerencial | Síndico e gestor | — |
 | Circulares | Síndico, conselheiro, gestor, morador e proprietário | Síndico e conselheiro publicam circulares. |
 | Agenda do condomínio | Síndico, morador, zelador e porteiro | Síndico cria, edita e exclui eventos. |
-| Reserva de espaços | Síndico, gestor e morador | Morador envia pedidos; síndico e gestor cadastram espaços, visualizam solicitações pendentes e aprovam ou recusam pedidos. |
-| Agenda de mudanças | Síndico, morador e zelador | Zelador aprova ou recusa solicitações. |
+| Reserva de espaços | Síndico, gestor, administradora e morador | Somente a administradora cadastra espaços; morador solicita; síndico e gestor analisam pedidos; síndico e administradora bloqueiam datas específicas. |
+| Agenda de mudanças | Síndico, administradora, morador e zelador | Morador e síndico solicitam; zelador decide; síndico e administradora configuram as regras do condomínio. |
 | Reparos | Síndico e zelador | Síndico abre solicitações; zelador atualiza o status. |
 | Fale com o Corpo Diretivo | Síndico e morador | O morador envia; a diretoria responde mensagens destinadas ao seu papel ou a “Todos”. |
+| Notificações | Usuários autenticados | Cada usuário consulta e marca como lidos apenas os avisos destinados a ele. |
 
 > A visibilidade no aplicativo melhora a experiência de uso, mas não substitui a segurança de banco. As políticas RLS do Supabase devem reproduzir as mesmas restrições por usuário, condomínio, unidade e papel.
 
@@ -79,9 +81,10 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 - Proprietário e morador recebem somente registros da própria unidade.
 - Síndico e gestor recebem registros de todas as unidades e podem usar o filtro de unidade.
 - Há filtros por unidade, ano, mês e status (`A vencer`, `Vencido` e `Pago`).
-- O status visual de vencimento considera a data atual quando o boleto ainda não está marcado como pago.
-- Para boletos vencidos, a tela de 2ª via calcula multa de 2% e juros de 1% ao mês proporcional aos dias em atraso.
-- Acima de 60 dias de atraso, o usuário é encaminhado à tela de contato jurídico.
+- O status de pagamento é exibido conforme o valor recebido do ERP e armazenado no boleto; o aplicativo não altera esse status comparando a data atual com o vencimento.
+- Multa, juros mensais, base de cálculo dos juros e prazo para encaminhamento jurídico são configurações próprias de cada condomínio.
+- O aplicativo utiliza os campos de cobrança do condomínio ativo, que futuramente poderão ser sincronizados com a regra cadastrada no ERP.
+- Quando o boleto ultrapassa o prazo jurídico configurado para aquele condomínio, a visualização da 2ª via é bloqueada e o usuário é encaminhado ao contato jurídico.
 
 **Limite atual:** a geração de PDF, linha digitável, envio por e-mail e baixa bancária ainda não estão integrados; a 2ª via é uma simulação de valor atualizado.
 
@@ -97,8 +100,9 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 
 - Todos os perfis liberados podem consultar comunicados do condomínio ativo.
 - Síndico e conselheiro podem publicar comunicados com categoria, título e conteúdo.
-- As categorias disponíveis são: Aviso, Manutenção, Assembleia, Regra e Urgente.
+- As categorias disponíveis são: Aviso, Manutenção e Informação.
 - A lista é ordenada pela data de publicação; conteúdos longos podem ser expandidos na própria tela.
+- A publicação gera notificações persistentes para moradores e proprietários vinculados ao condomínio.
 
 ### 5.5 Agenda do condomínio
 
@@ -106,20 +110,25 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 - A agenda apresenta os eventos em ordem de data e informa se o evento é hoje, amanhã, futuro ou já ocorreu.
 - O síndico pode publicar, editar e excluir eventos.
 - A exclusão exige confirmação do usuário.
+- A criação de um evento gera notificações aos perfis destinatários vinculados ao condomínio.
 
 ### 5.6 Reservas de espaços
 
 - Os espaços são consultados por condomínio e podem ter responsável, capacidade, valor e antecedência informada.
 - Cada dia possui dois turnos independentes: `Manhã` (08:00 às 15:00) e `Tarde` (16:00 às 22:00).
-- Uma nova reserva exige nome do evento e é criada com status `pendente`, para análise da administração.
+- Cada espaço define seu modo de aprovação: `automatica`, `manual` ou `por_inadimplencia`.
+- Na aprovação automática, o pedido nasce aprovado. Na aprovação manual, nasce pendente. Na aprovação por inadimplência, usuários adimplentes recebem aprovação automática e pedidos de unidades inadimplentes ficam pendentes para análise.
 - Reservas com status `pendente` ou `aprovada` ocupam somente o respectivo turno. Portanto, uma reserva de manhã ainda permite uma solicitação para a tarde na mesma data, e vice-versa.
 - O turno já ocupado aparece como indisponível no formulário e não pode ser selecionado. O botão de envio também permanece desativado para um turno indisponível.
 - Quando os dois turnos estão ocupados, o dia fica cinza no calendário e não aceita novas solicitações.
 - O síndico e o gestor veem uma lista de solicitações pendentes abaixo do calendário, sem precisar abrir cada dia para encontrá-las.
 - O síndico e o gestor podem aprovar ou recusar uma solicitação pendente. Uma reserva recusada libera novamente aquele turno para nova solicitação.
-- O síndico e o gestor podem cadastrar espaços comuns diretamente pelo aplicativo.
+- Somente a administradora pode cadastrar espaços comuns diretamente pelo aplicativo.
+- Síndico e administradora podem bloquear e desbloquear datas específicas, como Natal, Ano-Novo ou períodos de manutenção.
+- Uma data bloqueada não aceita novas reservas, e o banco impede o bloqueio quando já existe reserva ativa para a data.
+- A criação e as alterações de status das reservas geram notificações aos usuários envolvidos.
 
-**Regra de concorrência:** o aplicativo valida espaço, data e turno antes de inserir uma reserva. Para impedir duplicidade mesmo em acessos simultâneos, o banco deve ter um índice único parcial em `espaco_id`, `data_evento` e `periodo`, válido apenas para os status `pendente` e `aprovada`.
+**Regra de concorrência:** além da validação feita pelo aplicativo, o banco impede que duas solicitações ativas ocupem simultaneamente o mesmo espaço, data e turno.
 
 **Compatibilidade de dados:** há registros legados com status `bloqueada`. O fluxo atual de turnos usa como ocupação apenas `pendente` e `aprovada`; antes de usar `bloqueada` como regra operacional, é necessário definir se ela representa bloqueio do dia inteiro ou migrar esses registros para os status oficiais.
 
@@ -127,11 +136,11 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 
 - Morador e síndico podem solicitar entrada ou saída de mudança em uma data futura.
 - Cada solicitação registra unidade, data, turno, tipo, empresa responsável e status inicial `pendente`.
-- Datas com solicitação pendente ou aprovada são indisponibilizadas no calendário.
+- Solicitações pendentes ou aprovadas bloqueiam somente o turno escolhido. O outro turno da mesma data continua disponível.
 - O morador vê apenas as próprias solicitações; o zelador vê as solicitações do condomínio.
 - O zelador aprova ou recusa pedidos, atualizando o status no banco.
 
-**Regras exibidas:** responsável, horário, antecedência e tipo de acesso são regras operacionais fixas nesta versão. Elas ainda não possuem cadastro por condomínio no banco.
+**Regras configuráveis:** cada condomínio possui responsável, antecedência mínima, tipo de acesso e horários inicial/final dos turnos da manhã e da tarde. Síndico e administradora fazem esse cadastro no próprio módulo. Os campos de horário recebem apenas números e aplicam automaticamente o formato `HH:MM`. Sem regra cadastrada, o aplicativo impede o envio e orienta a configuração.
 
 ### 5.8 Reparos e manutenção
 
@@ -155,6 +164,20 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 - Síndico, subsíndico, conselheiro e gestor atuam como diretoria quando acessam a tela.
 - A caixa de entrada da diretoria mostra somente mensagens direcionadas ao papel atual ou a `Todos`.
 - A resposta é gravada na própria mensagem e altera o status para `Respondido`.
+- O e-mail dos membros da diretoria não é exposto na listagem, preservando a privacidade dos usuários.
+- O envio e a resposta geram notificações persistentes para os envolvidos.
+
+### 5.10 Notificações internas
+
+- As notificações são registros reais do Supabase e não dados fixos no aplicativo.
+- Cada registro pertence a um usuário e a um condomínio, possui texto, tipo, referência, rota de destino, data de criação e indicador de leitura.
+- A tela ordena os avisos do mais recente para o mais antigo e diferencia visualmente os não lidos.
+- O usuário pode marcar uma notificação individual ou todas as notificações como lidas.
+- O sino do cabeçalho abre a tela de notificações e exibe a quantidade de itens não lidos.
+- O aplicativo acompanha novos registros em tempo real enquanto está em execução.
+- Circulares, eventos, reservas, mudanças, reparos e mensagens da diretoria estão integrados ao fluxo de notificações.
+
+**Limite atual:** as notificações são internas e persistentes, mas ainda não são notificações push nativas quando o aplicativo está fechado.
 
 ## 6. Integração com o Supabase
 
@@ -169,11 +192,14 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 | `fluxo_caixa` | Séries financeiras do dashboard. |
 | `circulares` | Leitura e publicação de comunicados. |
 | `eventos` | Agenda do condomínio. |
-| `espacos` | Espaços que podem ser reservados. |
+| `espacos` | Espaços que podem ser reservados e seu modo de aprovação. |
 | `reservas` | Solicitações e ocupação de espaços. |
+| `bloqueios_espacos` | Datas específicas bloqueadas para reserva por espaço. |
 | `mudancas` | Solicitações e decisões sobre mudanças. |
+| `regras_mudanca` | Regras e horários de mudança configurados por condomínio. |
 | `reparos` | Abertura e acompanhamento de manutenção. |
 | `mensagens_diretoria` | Comunicação entre moradores e diretoria. |
+| `notificacoes` | Avisos persistentes individualizados, leitura e navegação para o registro relacionado. |
 
 ### Conexão e verificação
 
@@ -182,15 +208,10 @@ O menu é montado conforme o papel salvo no vínculo entre usuário e condomíni
 - Com conexão válida, o console mostra `Supabase Ready/Connected!`.
 - O arquivo `.env` é ignorado pelo Git para evitar versionamento de credenciais.
 
-### Integridade das reservas
+### Banco de dados e integridade
 
-Para impedir que duas solicitações concorrentes ocupem o mesmo espaço, data e turno, recomenda-se criar no Supabase o índice abaixo. Antes de executá-lo, duplicidades já existentes devem ser tratadas.
-
-```sql
-create unique index if not exists reservas_espaco_data_periodo_ativo_unico
-on public.reservas (espaco_id, data_evento, periodo)
-where status in ('pendente', 'aprovada');
-```
+- O banco aplica as regras de concorrência de reservas, bloqueios de datas, modos de aprovação, notificações integradas e regras de mudança por condomínio.
+- Antes de usar o aplicativo em outro projeto Supabase, as alterações SQL devem ser formalizadas como migrações versionadas, executadas na ordem e validadas com os dados existentes.
 
 ## 7. Como preparar o ambiente local
 
@@ -257,17 +278,17 @@ npx tsc --noEmit
 
 1. Migrar o login para Supabase Auth, com senha protegida e JWT real. Nesta versão, a senha é comparada no cliente e o ID do usuário é usado como identificador de sessão.
 2. Implementar e validar RLS para isolar condomínio, unidade, usuário e permissões de escrita por papel.
-3. Criar e validar regras de unicidade no banco para evitar conflitos simultâneos de reservas e mudanças.
-4. Formalizar ou migrar o status legado `bloqueada` das reservas, definindo seu efeito operacional.
-5. Criar cadastro de regras de mudança por condomínio.
-6. Integrar emissão bancária da 2ª via, documentos e fotos de reparos ao armazenamento apropriado.
-7. Atualizar os indicadores financeiros em tempo real ou ao entrar no dashboard.
+3. Formalizar ou migrar o status legado `bloqueada` das reservas, definindo seu efeito operacional.
+4. Integrar as regras de cobrança com o ERP, substituindo a manutenção manual dos campos no Supabase.
+5. Integrar emissão bancária da 2ª via, documentos e fotos de reparos ao armazenamento apropriado.
+6. Atualizar os indicadores financeiros em tempo real ou ao entrar no dashboard.
+7. Implementar notificações push nativas para avisos recebidos com o aplicativo fechado.
 8. Criar testes automatizados e pipeline de validação antes da publicação.
 
 ## 10. Itens fora do escopo atual
 
-Os itens abaixo aparecem no catálogo do produto, mas ainda não possuem fluxo implementado nesta versão: extratos financeiros, cotas pendentes, notas fiscais, informe de rendimentos, gestão de gastos, imóveis, pesquisa de aluguéis, gerente de contas, notificações push, suporte por e-mail, portaria, controle de consumo, documentos digitalizados, departamento pessoal e obrigações legais.
+Os itens abaixo aparecem no catálogo do produto, mas ainda não possuem fluxo implementado nesta versão: extratos financeiros, cotas pendentes, notas fiscais, informe de rendimentos, gestão de gastos, imóveis, pesquisa de aluguéis, gerente de contas, notificações push nativas, suporte por e-mail, portaria, controle de consumo, documentos digitalizados, departamento pessoal e obrigações legais.
 
 ## 11. Resumo para acompanhamento de produto
 
-O aplicativo já tem uma base funcional integrada ao banco para operar um condomínio: acesso, contexto de usuário e condomínio, comunicação, agenda, manutenção, solicitações operacionais e consulta financeira. As principais evoluções não são telas faltantes do fluxo atual, mas reforços de segurança, automação bancária, armazenamento de anexos e regras de banco para impedir conflitos e acessos indevidos.
+O aplicativo já tem uma base funcional integrada ao banco para operar um condomínio: acesso, múltiplos papéis, contexto de condomínio, comunicação, notificações internas, agenda, manutenção, reservas com aprovação configurável, bloqueio de datas, regras de mudança por condomínio, solicitações operacionais e consulta financeira. As principais evoluções são reforços de segurança, integração real com ERP e serviços bancários, atualização dos indicadores financeiros durante a sessão, armazenamento de anexos, push nativo e testes automatizados.

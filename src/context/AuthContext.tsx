@@ -12,6 +12,10 @@ export interface Condominio {
   contaCorrente?: number;
   investimentos?: number;
   inadimplencia?: number;
+  baseJurosDias?: number | null;
+  diasJuridico?: number | null;
+  multaPercentual?: number | null;
+  jurosMensalPercentual?: number | null;
 }
 
 interface AuthContextData {
@@ -26,6 +30,8 @@ interface AuthContextData {
   login: (cpf: string, senha: string) => Promise<{ user: any, condominiosVistos: Condominio[] }>;
   logout: () => Promise<void>;
   selecionarCondominioAtivo: (condominio: Condominio) => void;
+  marcarNotificacoesComoLidas: () => Promise<void>;
+  atualizarContadorNotificacoes: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -40,6 +46,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notificacoes, setNotificacoes] = useState(0); 
   const [condominios, setCondominios] = useState<Condominio[]>([]);
   const [condominioAtivo, setCondominioAtivo] = useState<Condominio | null>(null);
+
+  useEffect(() => {
+    if (!token || !condominioAtivo?.id) return;
+
+    const condominioId = condominioAtivo.id;
+    let ativo = true;
+
+    async function carregarNaoLidas() {
+      try {
+        const { count, error } = await supabase
+          .from('notificacoes')
+          .select('id', { count: 'exact', head: true })
+          .eq('condominio_id', condominioId)
+          .eq('usuario_id', token)
+          .eq('lida', false);
+
+        if (error) throw error;
+        if (ativo) setNotificacoes(count || 0);
+      } catch (error) {
+        console.error('Erro ao carregar notificações de circulares:', error);
+      }
+    }
+
+    carregarNaoLidas();
+
+    const canal = supabase
+      .channel(`notificacoes-${condominioId}-${token}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificacoes', filter: `usuario_id=eq.${token}` },
+        () => setNotificacoes(valorAtual => valorAtual + 1)
+      )
+      .subscribe();
+
+    return () => {
+      ativo = false;
+      supabase.removeChannel(canal);
+    };
+  }, [token, condominioAtivo?.id, condominioAtivo?.papel]);
 
   useEffect(() => {
     async function verificarTokenSalvo() {
@@ -90,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select(`
           papel,
           unidade,
-          condominios (id, nome, endereco, conta_corrente, investimentos, inadimplencia)
+          condominios (id, nome, endereco, conta_corrente, investimentos, inadimplencia, cobranca_base_juros_dias, cobranca_dias_juridico, cobranca_multa_percentual, cobranca_juros_mensal_percentual)
         `)
         .eq('usuario_id', usuario.id);
 
@@ -111,6 +156,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           contaCorrente: parseFloat(condoData?.conta_corrente || 0),
           investimentos: parseFloat(condoData?.investimentos || 0),
           inadimplencia: parseFloat(condoData?.inadimplencia || 0),
+          baseJurosDias: condoData?.cobranca_base_juros_dias ?? null,
+          diasJuridico: condoData?.cobranca_dias_juridico ?? null,
+          multaPercentual: condoData?.cobranca_multa_percentual ?? null,
+          jurosMensalPercentual: condoData?.cobranca_juros_mensal_percentual ?? null,
         };
       });
 
@@ -179,11 +228,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEstaAutenticado(false);
   };
 
+  const marcarNotificacoesComoLidas = async () => {
+    if (token && condominioAtivo?.id) {
+      try {
+        const { error } = await supabase
+          .from('notificacoes')
+          .update({ lida: true })
+          .eq('usuario_id', token)
+          .eq('condominio_id', condominioAtivo.id)
+          .eq('lida', false);
+        if (error) throw error;
+      } catch (error) {
+        console.error('Erro ao marcar notificações como lidas:', error);
+      }
+    }
+    setNotificacoes(0);
+  };
+
+  const atualizarContadorNotificacoes = async () => {
+    if (!token || !condominioAtivo?.id) return;
+    const { count, error } = await supabase
+      .from('notificacoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('usuario_id', token)
+      .eq('condominio_id', condominioAtivo.id)
+      .eq('lida', false);
+    if (!error) setNotificacoes(count || 0);
+  };
+
   return (
     <AuthContext.Provider value={{ 
       estaAutenticado, carregandoContexto, token, 
       nomeUsuario, cpf, notificacoes, condominios, condominioAtivo, 
-      login, logout, selecionarCondominioAtivo 
+      login, logout, selecionarCondominioAtivo, marcarNotificacoesComoLidas, atualizarContadorNotificacoes
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -13,7 +13,7 @@ interface GlobalHeaderProps {
 
 export function GlobalHeader({ showBackArrow = false }: GlobalHeaderProps) {
   const navigation = useNavigation<any>();
-  const { logout, nomeUsuario, notificacoes, condominioAtivo } = useAuth(); 
+  const { logout, nomeUsuario, notificacoes, condominioAtivo } = useAuth();
 
   const papelAtual = normalizarPapel(condominioAtivo?.papel || 'Morador');
   const iniciais = nomeUsuario
@@ -42,7 +42,7 @@ export function GlobalHeader({ showBackArrow = false }: GlobalHeaderProps) {
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.headerIcon} 
-            onPress={() => Alert.alert('Notificações', `Você tem ${notificacoes} avisos.`)}
+            onPress={() => navigation.navigate('Notificacoes')}
           >
             <Feather name="bell" size={18} color="#fff" />
             {notificacoes > 0 && (

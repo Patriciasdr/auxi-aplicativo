@@ -21,7 +21,6 @@ export interface MembroDiretoria {
   papel: string;
   nome: string;
   iniciais: string;
-  email: string;
   cor: string;
 }
 
@@ -172,6 +171,7 @@ export const buscarEspacosReservas = async (condominioId: string) => {
     capacidade: e.capacidade,
     valor: parseFloat(e.valor || '0'),
     antecedencia: e.antecedencia,
+    modoAprovacao: e.modo_aprovacao || 'manual',
     icone: 'home',
     bannerColors: ['#00A859', '#00803f'], 
     approvedDays: [], 
@@ -183,7 +183,7 @@ export const buscarEspacosReservas = async (condominioId: string) => {
 export const buscarDiretoria = async (condominioId: string) => {
   const { data: vinculos } = await supabase
     .from('usuarios_condominios')
-    .select('papel, usuarios(nome, email)')
+    .select('papel, usuarios(nome)')
     .eq('condominio_id', condominioId);
 
   const { data: mensagens } = await supabase
@@ -200,7 +200,6 @@ export const buscarDiretoria = async (condominioId: string) => {
         papel: v.papel,
         nome: nome,
         iniciais: nome.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
-        email: Array.isArray(v.usuarios) ? v.usuarios[0]?.email : v.usuarios?.email,
         cor: index % 2 === 0 ? '#43a047' : '#1565c0'
       };
     });
@@ -238,12 +237,13 @@ export const enviarMensagemDiretoria = async (dados: {
 };
 
 export const buscarMudancas = async (condominioId: string) => {
-  const { data, error } = await supabase
-    .from('mudancas')
-    .select('*')
-    .eq('condominio_id', condominioId);
+  const [{ data, error }, { data: regra, error: erroRegra }] = await Promise.all([
+    supabase.from('mudancas').select('*').eq('condominio_id', condominioId),
+    supabase.from('regras_mudanca').select('*').eq('condominio_id', condominioId).maybeSingle()
+  ]);
 
   if (error) return { regras: {}, approvedDays: [], pendingDays: [], blockedDays: [], historico: [] };
+  if (erroRegra) throw erroRegra;
 
   
   const approvedDays: number[] = [];
@@ -269,7 +269,16 @@ export const buscarMudancas = async (condominioId: string) => {
   });
 
   return { 
-    regras: { responsavel: 'Zelador', horario: '08:00 às 18:00', antecedencia: '2 dias', acesso: 'Elevador de Serviço' }, 
+    regras: regra ? {
+      responsavel: regra.responsavel,
+      horario: regra.horario_geral,
+      antecedencia: regra.antecedencia_horas != null ? `${regra.antecedencia_horas} horas` : null,
+      acesso: regra.acesso,
+      manhaInicio: regra.manha_inicio,
+      manhaFim: regra.manha_fim,
+      tardeInicio: regra.tarde_inicio,
+      tardeFim: regra.tarde_fim
+    } : null,
     approvedDays, 
     pendingDays, 
     blockedDays: [], 
@@ -419,7 +428,88 @@ export const listarMudancas = async (condominioId: string) => {
 };
 
 export const criarMudanca = async (dados: any) => {
+  const { data: conflitos, error: erroConsulta } = await supabase
+    .from('mudancas')
+    .select('id')
+    .eq('condominio_id', dados.condominio_id)
+    .eq('data_mudanca', dados.data_mudanca)
+    .eq('periodo', dados.periodo)
+    .in('status', ['pendente', 'Aprovado', 'Aprovada', 'aprovado', 'aprovada'])
+    .limit(1);
+
+  if (erroConsulta) throw erroConsulta;
+  if (conflitos && conflitos.length > 0) throw new Error('TURNO_MUDANCA_INDISPONIVEL');
+
   const { error } = await supabase.from('mudancas').insert([dados]);
+  if (error?.code === '23505') throw new Error('TURNO_MUDANCA_INDISPONIVEL');
+  if (error) throw error;
+};
+
+export const salvarRegrasMudanca = async (condominioId: string, regras: {
+  responsavel: string;
+  horario_geral: string;
+  antecedencia_horas: number;
+  acesso: string;
+  manha_inicio: string;
+  manha_fim: string;
+  tarde_inicio: string;
+  tarde_fim: string;
+}) => {
+  const { error } = await supabase.from('regras_mudanca').upsert({
+    condominio_id: condominioId,
+    ...regras,
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'condominio_id' });
+  if (error) throw error;
+};
+
+export const listarBloqueiosEspaco = async (espacoId: string) => {
+  const { data, error } = await supabase
+    .from('bloqueios_espacos')
+    .select('id, data_bloqueio, motivo')
+    .eq('espaco_id', espacoId);
+  if (error) throw error;
+  return data || [];
+};
+
+const validarPermissaoBloqueioEspaco = async (espacoId: string, usuarioId: string) => {
+  const { data: espaco, error: erroEspaco } = await supabase
+    .from('espacos')
+    .select('condominio_id')
+    .eq('id', espacoId)
+    .single();
+  if (erroEspaco) throw erroEspaco;
+
+  const { data: vinculo, error: erroVinculo } = await supabase
+    .from('usuarios_condominios')
+    .select('id')
+    .eq('usuario_id', usuarioId)
+    .eq('condominio_id', espaco.condominio_id)
+    .in('papel', ['Síndico', 'Administradora'])
+    .limit(1)
+    .maybeSingle();
+  if (erroVinculo) throw erroVinculo;
+  if (!vinculo) throw new Error('SEM_PERMISSAO_BLOQUEAR_ESPACO');
+};
+
+export const bloquearDataEspaco = async (espacoId: string, dataBloqueio: string, motivo: string | null, usuarioId: string) => {
+  await validarPermissaoBloqueioEspaco(espacoId, usuarioId);
+  const { error } = await supabase.from('bloqueios_espacos').insert([{
+    espaco_id: espacoId,
+    data_bloqueio: dataBloqueio,
+    motivo
+  }]);
+  if (error?.code === '23505') throw new Error('DATA_JA_BLOQUEADA');
+  if (error) throw error;
+};
+
+export const desbloquearDataEspaco = async (espacoId: string, dataBloqueio: string, usuarioId: string) => {
+  await validarPermissaoBloqueioEspaco(espacoId, usuarioId);
+  const { error } = await supabase
+    .from('bloqueios_espacos')
+    .delete()
+    .eq('espaco_id', espacoId)
+    .eq('data_bloqueio', dataBloqueio);
   if (error) throw error;
 };
 
@@ -448,6 +538,16 @@ export const listarReservasDoEspaco = async (espacoId: string) => {
 };
 
 export const criarReserva = async (dados: any) => {
+  const { data: bloqueio, error: erroBloqueio } = await supabase
+    .from('bloqueios_espacos')
+    .select('id')
+    .eq('espaco_id', dados.espaco_id)
+    .eq('data_bloqueio', dados.data_evento)
+    .maybeSingle();
+
+  if (erroBloqueio) throw erroBloqueio;
+  if (bloqueio) throw new Error('DATA_BLOQUEADA');
+
   const { data: reservasExistentes, error: erroConsulta } = await supabase
     .from('reservas')
     .select('id, status')
@@ -462,7 +562,77 @@ export const criarReserva = async (dados: any) => {
     throw new Error('RESERVA_JA_EXISTE');
   }
 
-  const { error } = await supabase.from('reservas').insert([dados]);
+  const { data: espaco, error: erroEspaco } = await supabase
+    .from('espacos')
+    .select('condominio_id, modo_aprovacao')
+    .eq('id', dados.espaco_id)
+    .single();
+  if (erroEspaco) throw erroEspaco;
+
+  let statusInicial = 'pendente';
+  if (espaco.modo_aprovacao === 'automatica') {
+    statusInicial = 'aprovada';
+  } else if (espaco.modo_aprovacao === 'por_inadimplencia') {
+    const { data: vinculo, error: erroVinculo } = await supabase
+      .from('usuarios_condominios')
+      .select('unidade')
+      .eq('usuario_id', dados.usuario_id)
+      .eq('condominio_id', espaco.condominio_id)
+      .limit(1)
+      .maybeSingle();
+    if (erroVinculo) throw erroVinculo;
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const { count, error: erroBoletos } = await supabase
+      .from('boletos')
+      .select('id', { count: 'exact', head: true })
+      .eq('condominio_id', espaco.condominio_id)
+      .eq('unidade', vinculo?.unidade || '')
+      .neq('status', 'pago')
+      .lt('vencimento', hoje);
+    if (erroBoletos) throw erroBoletos;
+    statusInicial = (count || 0) > 0 ? 'pendente' : 'aprovada';
+  }
+
+  const { error } = await supabase.from('reservas').insert([{ ...dados, status: statusInicial }]);
+  if (error) throw error;
+  return statusInicial;
+};
+
+export interface NotificacaoItem {
+  id: string;
+  texto: string;
+  lida: boolean;
+  criadoEm: string;
+  circularId: string | null;
+  rota: string | null;
+}
+
+export const buscarNotificacoes = async (usuarioId: string, condominioId: string): Promise<NotificacaoItem[]> => {
+  const { data, error } = await supabase
+    .from('notificacoes')
+    .select('id, texto, lida, criado_em, circular_id, rota')
+    .eq('usuario_id', usuarioId)
+    .eq('condominio_id', condominioId)
+    .order('criado_em', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(item => ({
+    id: item.id,
+    texto: item.texto,
+    lida: item.lida,
+    criadoEm: item.criado_em,
+    circularId: item.circular_id,
+    rota: item.rota
+  }));
+};
+
+export const marcarNotificacaoLida = async (id: string, usuarioId: string) => {
+  const { error } = await supabase
+    .from('notificacoes')
+    .update({ lida: true })
+    .eq('id', id)
+    .eq('usuario_id', usuarioId);
   if (error) throw error;
 };
 
@@ -471,7 +641,18 @@ export const atualizarStatusReserva = async (id: string, status: 'aprovada' | 'r
   if (error) throw error;
 };
 
-export const criarEspaco = async (dados: any) => {
+export const criarEspaco = async (dados: any, usuarioId: string) => {
+  const { data: vinculo, error: erroPermissao } = await supabase
+    .from('usuarios_condominios')
+    .select('id')
+    .eq('usuario_id', usuarioId)
+    .eq('condominio_id', dados.condominio_id)
+    .eq('papel', 'Administradora')
+    .maybeSingle();
+
+  if (erroPermissao) throw erroPermissao;
+  if (!vinculo) throw new Error('SEM_PERMISSAO_CRIAR_ESPACO');
+
   const { data, error } = await supabase.from('espacos').insert([dados]).select().single();
   if (error) throw error;
   return data;

@@ -14,6 +14,7 @@ import { ContatoCDScreen } from '../screens/ContatoCDScreen';
 import { CircularesScreen } from '../screens/CircularesScreen'; 
 import { AgendaCondominioScreen } from '../screens/AgendaCondominioScreen'; 
 import { PerfilScreen } from '../screens/PerfilScreen';
+import { NotificacoesScreen } from '../screens/NotificacoesScreen';
 import { MenuSheet } from '../components/MenuSheet'; 
 import { GlobalHeader } from '../components/GlobalHeader';
 import { Subnav } from '../components/Subnav';
@@ -74,6 +75,7 @@ export function TabRoutes() {
         {rotasPermitidas.has('AgendaCondominio') && <Tab.Screen name="AgendaCondominio" component={AgendaCondominioScreen} options={{ title: 'Agenda do Condomínio' }} />}
         
         <Tab.Screen name="Perfil" component={PerfilScreen} options={{ title: 'Meu perfil' }} />
+        <Tab.Screen name="Notificacoes" component={NotificacoesScreen} options={{ title: 'Notificações' }} />
       </Tab.Navigator>
 
       <MenuSheet visible={menuAberto} onClose={() => setMenuAberto(false)} />

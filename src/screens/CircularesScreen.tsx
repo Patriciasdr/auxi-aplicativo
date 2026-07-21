@@ -25,7 +25,7 @@ export function CircularesScreen() {
   const [novoCorpo, setNovoCorpo] = useState('');
   const [catAberta, setCatAberta] = useState(false);
 
-  const catOptions = ['Aviso', 'Manutenção', 'Assembleia', 'Regra', 'Urgente'];
+  const catOptions = ['Aviso', 'Manutenção', 'Informação'];
 
   const carregarDados = async () => {
     if (!condominioAtivo?.id) return;

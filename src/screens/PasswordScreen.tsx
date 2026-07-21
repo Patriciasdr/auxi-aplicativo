@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../constants/theme';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { formatarCpfMascarado } from '../utils/formatters';
 
 
 type PasswordRouteProp = RouteProp<RootStackParamList, 'Password'>;
@@ -78,7 +79,7 @@ export function PasswordScreen() {
           </View>
           <View>
             <Text style={styles.greeting}>Olá, <Text style={styles.userName}>{nome || 'Morador'}</Text></Text>
-            <Text style={styles.userCpf}>CPF {cpfFormatado || '•••.•••.•••-••'}</Text>
+            <Text style={styles.userCpf}>{formatarCpfMascarado(cpfLimpo || cpfFormatado)}</Text>
           </View>
         </View>
 

@@ -10,6 +10,7 @@ import { Button } from '../components/Button';
 import { CustomSelect } from '../components/CustomSelect';
 import { useNavigation } from '@react-navigation/native';
 import { AppNavigatorRoutesProps } from '../navigation/types/navigation'; 
+import { normalizarPapel } from '../config/modules';
 
 interface ReparoItem {
   id: string;
@@ -29,8 +30,9 @@ export function ReparosScreen() {
   const navigation = useNavigation<AppNavigatorRoutesProps>();
 
   
-  const isZelador = condominioAtivo?.papel === 'Zelador';
-  const isSindico = ['Síndico', 'Gestor', 'Conselheiro'].includes(condominioAtivo?.papel || '');
+  const papelAtual = normalizarPapel(condominioAtivo?.papel || 'Morador');
+  const isZelador = papelAtual === 'Zelador';
+  const podeAbrirChamado = ['Síndico', 'Morador', 'Proprietário'].includes(papelAtual);
 
   const [area, setArea] = useState('Selecione...');
   const [urgencia, setUrgencia] = useState('Normal');
@@ -69,6 +71,11 @@ export function ReparosScreen() {
   }, [condominioAtivo]);
 
   const handleEnviarSolicitacao = async () => {
+    if (!podeAbrirChamado) {
+      Alert.alert('Acesso restrito', 'Seu perfil não pode abrir chamados de reparo.');
+      return;
+    }
+
     if (!area || area === 'Selecione...') {
       Alert.alert('Atenção', 'Por favor, selecione a área do condomínio.');
       return;
@@ -115,6 +122,11 @@ export function ReparosScreen() {
   };
 
   const handleAtualizarStatus = async (id: string, novoStatus: string) => {
+    if (!isZelador) {
+      Alert.alert('Acesso restrito', 'Somente o zelador pode atualizar chamados de reparo.');
+      return;
+    }
+
     let progresso = 0;
     let nota = '';
 
@@ -162,12 +174,12 @@ export function ReparosScreen() {
         
         <Text style={styles.pageSub}>
           {isZelador 
-            ? 'Acompanhe as solicitações abertas pelo síndico e atualize o andamento do serviço.' 
+            ? 'Acompanhe as solicitações abertas e atualize o andamento do serviço.'
             : 'Registre ocorrências e acompanhe o status dos reparos em áreas comuns.'}
         </Text>
 
         
-        {isSindico && (
+        {podeAbrirChamado && (
           <View style={styles.panel}>
             <View style={styles.panelHead}>
               <Text style={styles.panelTitle}>Nova solicitação</Text>

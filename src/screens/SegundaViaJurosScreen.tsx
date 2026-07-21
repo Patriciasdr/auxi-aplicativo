@@ -5,10 +5,12 @@ import { RootStackParamList } from '../navigation/types/navigation';
 import { COLORS } from '../constants/theme';
 import { formatarMoeda } from '../utils/formatters';
 import { Button } from '../components/Button';
+import { useAuth } from '../context/AuthContext';
 
 type SegundaViaRouteProp = RouteProp<RootStackParamList, 'SegundaViaJuros'>;
 
 export function SegundaViaJurosScreen() {
+  const { condominioAtivo } = useAuth();
   const [opcaoEntrega, setOpcaoEntrega] = useState<'email' | 'pdf' | 'copiar'>('email');
   const route = useRoute<SegundaViaRouteProp>();
   const boletoClicado = route.params?.boleto;
@@ -25,8 +27,13 @@ export function SegundaViaJurosScreen() {
   const vencimentoOriginal = boletoClicado.vencto;
   const valorOriginal = boletoClicado.valor;
   const diasAtraso = Math.abs(boletoClicado.dias || 0); 
-  const multa = valorOriginal * 0.02;
-  const juros = valorOriginal * 0.01 * (diasAtraso / 30);
+  const multaPercentual = condominioAtivo?.multaPercentual ?? 0;
+  const jurosMensalPercentual = condominioAtivo?.jurosMensalPercentual ?? 0;
+  const baseJurosDias = condominioAtivo?.baseJurosDias ?? 0;
+  const multa = valorOriginal * (multaPercentual / 100);
+  const juros = baseJurosDias > 0
+    ? valorOriginal * (jurosMensalPercentual / 100) * (diasAtraso / baseJurosDias)
+    : 0;
   const valorAtualizado = valorOriginal + multa + juros;
 
   const gerarSegundaVia = () => {
@@ -42,7 +49,7 @@ export function SegundaViaJurosScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.pageSub}>Boleto vencido há mais de 30 dias - valor atualizado com juros e multa</Text>
+        <Text style={styles.pageSub}>Boleto elegível para segunda via conforme a regra de cobrança do condomínio.</Text>
 
         <View style={styles.panel}>
           <View style={styles.panelHead}>
@@ -62,11 +69,11 @@ export function SegundaViaJurosScreen() {
               <Text style={styles.val}>{formatarMoeda(valorOriginal)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Juros ({diasAtraso} dias - 1% a.m.)</Text>
+              <Text style={styles.label}>Juros ({diasAtraso} dias — {jurosMensalPercentual}% a.m.)</Text>
               <Text style={[styles.val, { color: COLORS.red }]}>+ {formatarMoeda(juros)}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>Multa (2%)</Text>
+              <Text style={styles.label}>Multa ({multaPercentual}%)</Text>
               <Text style={[styles.val, { color: COLORS.red }]}>+ {formatarMoeda(multa)}</Text>
             </View>
             <View style={styles.divider} />

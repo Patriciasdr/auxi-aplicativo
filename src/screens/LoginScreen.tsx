@@ -26,7 +26,6 @@ export function LoginScreen() {
 
   const executarIdentificacao = async () => {
     const numeros = soNumeros(cpf);
-    console.log('[LOGIN] CPF limpo para busca:', numeros);
 
     
     

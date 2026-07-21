@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
 
 export interface BoletoProps {
   id?: string;
@@ -16,6 +17,9 @@ export interface BoletoProps {
 
 export function BoletoCard({ data }: { data: BoletoProps }) {
   const navigation = useNavigation<any>();
+  const { condominioAtivo } = useAuth();
+  const diasJuridico = condominioAtivo?.diasJuridico;
+  const regraConfigurada = diasJuridico != null;
   const valorFormatado = `R$ ${data.valor.toFixed(2).replace('.', ',')}`;
 
   const calcularDiasTempoReal = (dataString: string) => {
@@ -47,8 +51,9 @@ export function BoletoCard({ data }: { data: BoletoProps }) {
   let diasLabel = '';
   let diasColor = '#888';
 
-  const isVencido = data.status !== 'pago' && diasReais > 0;
-  const isAVencer = data.status !== 'pago' && !isVencido;
+  // O status é recebido do ERP. A data não altera a situação de pagamento.
+  const isVencido = data.status === 'vencido';
+  const isAVencer = data.status === 'a_vencer' || data.status === 'pendente';
 
   if (data.status === 'pago') {
     badgeBg = '#e8f5e9'; 
@@ -62,9 +67,9 @@ export function BoletoCard({ data }: { data: BoletoProps }) {
     diasLabel = `${diasNum} dias em atraso`;
     diasColor = '#c62828';
     
-    if (diasNum > 60) {
+    if (diasJuridico != null && diasNum >= diasJuridico) {
       cardBg = '#fff5f5';
-    } else if (diasNum > 30) {
+    } else if (diasJuridico != null) {
       diasColor = '#e65100'; 
       cardBg = '#fff8f0';
     }
@@ -131,7 +136,7 @@ export function BoletoCard({ data }: { data: BoletoProps }) {
           </>
         )}
 
-        {isVencido && diasNum <= 60 && (
+        {isVencido && regraConfigurada && diasNum < diasJuridico && (
           <>
             <TouchableOpacity style={styles.btnOutline}>
               <Feather name="eye" size={14} color={COLORS.greenMain} />
@@ -144,11 +149,15 @@ export function BoletoCard({ data }: { data: BoletoProps }) {
           </>
         )}
 
-        {isVencido && diasNum > 60 && (
+        {isVencido && regraConfigurada && diasNum >= diasJuridico && (
           <TouchableOpacity style={styles.btnDanger} onPress={() => navigation.navigate('Juridico', { boleto: boletoEnriquecido })}>
             <Feather name="alert-triangle" size={14} color="#c62828" />
             <Text style={styles.btnDangerText}>Contato jurídico</Text>
           </TouchableOpacity>
+        )}
+
+        {isVencido && !regraConfigurada && (
+          <Text style={styles.regraIndisponivel}>Regra de cobrança indisponível para este condomínio.</Text>
         )}
       </View>
     </View>
@@ -173,5 +182,6 @@ const styles = StyleSheet.create({
   btnOrange: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 7, backgroundColor: COLORS.orange, borderColor: COLORS.orange, borderWidth: 1, gap: 4 },
   btnOrangeText: { color: COLORS.white, fontFamily: 'Montserrat_600SemiBold', fontSize: 11 },
   btnDanger: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 7, backgroundColor: '#ffebee', borderColor: '#ffcdd2', borderWidth: 1, gap: 4 },
-  btnDangerText: { color: '#c62828', fontFamily: 'Montserrat_600SemiBold', fontSize: 11 }
+  btnDangerText: { color: '#c62828', fontFamily: 'Montserrat_600SemiBold', fontSize: 11 },
+  regraIndisponivel: { color: COLORS.textMuted, fontFamily: 'Montserrat_500Medium', fontSize: 11 }
 });
