@@ -7,7 +7,14 @@ node_modules/
 .expo/
 dist/
 web-build/
+.expo-test-dist/
+coverage/
 expo-env.d.ts
+
+# Local tests
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
 
 # Native
 .kotlin/

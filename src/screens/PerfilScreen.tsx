@@ -110,7 +110,7 @@ export function PerfilScreen() {
         <View style={styles.listLinks}>
           <TouchableOpacity 
             style={styles.listLink} 
-            onPress={() => Alert.alert('Dados Pessoais', 'A alteração de dados cadastrais está disponível através do portal web completo.')}
+            onPress={() => Alert.alert('Funcionalidade planejada', 'A alteração de dados cadastrais ainda não está disponível nesta versão.')}
           >
             <View style={styles.lic}><Feather name="edit" size={16} color={COLORS.greenMain} /></View>
             <Text style={styles.ltxt}>Dados pessoais</Text>
@@ -119,7 +119,7 @@ export function PerfilScreen() {
 
           <TouchableOpacity 
             style={styles.listLink} 
-            onPress={() => Alert.alert('Alterar Senha', 'Enviamos um link com as instruções para redefinição de senha segura para o seu e-mail cadastrado.')}
+            onPress={() => Alert.alert('Funcionalidade planejada', 'A redefinição de senha será disponibilizada com a API definitiva de autenticação.')}
           >
             <View style={styles.lic}><Feather name="lock" size={16} color={COLORS.greenMain} /></View>
             <Text style={styles.ltxt}>Alterar senha</Text>

@@ -38,12 +38,12 @@ export function SegundaViaJurosScreen() {
 
   const gerarSegundaVia = () => {
     const canal = {
-      email: 'enviada para o e-mail cadastrado',
-      pdf: 'preparada para download em PDF',
-      copiar: 'copiada para a área de transferência',
+      email: 'envio por e-mail',
+      pdf: 'download em PDF',
+      copiar: 'cópia da linha digitável',
     }[opcaoEntrega];
 
-    Alert.alert('2ª via gerada', `A 2ª via atualizada foi ${canal}.`);
+    Alert.alert('Simulação concluída', `O valor atualizado foi calculado. A integração para ${canal} faz parte da próxima etapa.`);
   };
 
   return (

@@ -49,43 +49,6 @@ export const identificarUsuario = async (cpfNumeros: string) => {
   return usuario;
 };
 
-export const realizarLogin = async (cpfLimpo: string, senhaDigitada: string) => {
-  const { data: usuario, error: erroUsu } = await supabase
-    .from('usuarios')
-    .select('id, nome, senha')
-    .eq('cpf', cpfLimpo)
-    .single();
-
-  if (erroUsu || !usuario) throw new Error('CREDENCIAIS_INVALIDAS');
-
-  if (usuario.senha !== senhaDigitada) {
-    throw new Error('CREDENCIAIS_INVALIDAS');
-  }
-
-  const { data: vinculos, error: erroVinc } = await supabase
-    .from('usuarios_condominios')
-    .select(`papel, unidade, condominios (id, nome, endereco)`)
-    .eq('usuario_id', usuario.id);
-
-  if (erroVinc) throw new Error('ERRO_BUSCAR_CONDOMINIOS');
-
-  const condominiosFormatados = (vinculos || []).map((v: any) => {
-    const condo = Array.isArray(v.condominios) ? v.condominios[0] : v.condominios;
-    return {
-      id: condo?.id,
-      nome: condo?.nome,
-      end: condo?.endereco,
-      papel: v.papel,
-      unidade: v.unidade 
-    };
-  });
-
-  return {
-    nome: usuario.nome,
-    condominios: condominiosFormatados,
-    token: 'jwt_secure_token_real' 
-  };
-};
 
 
 
@@ -339,29 +302,6 @@ export const buscarDashboard = async (condominioId: string): Promise<DashboardDa
 
 
 
-export const buscarReservasPorEspaco = async (espacoId: string) => {
-  const { data, error } = await supabase
-    .from('reservas')
-    .select('*')
-    .eq('espaco_id', espacoId);
-
-  if (error) throw error;
-  return data || [];
-};
-
-export const criarNovaReserva = async (dados: {
-  espaco_id: string;
-  usuario_id: string;
-  data_evento: string;
-  periodo: string;
-  status: string;
-}) => {
-  const { error } = await supabase
-    .from('reservas')
-    .insert([dados]);
-
-  if (error) throw error;
-};
 
 
 

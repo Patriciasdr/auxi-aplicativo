@@ -33,7 +33,7 @@ export function HomeScreen() {
     if (mod.route) {
       navigation.navigate(mod.route as any); 
     } else {
-      Alert.alert('Módulo Indisponível', `O módulo "${mod.nome}" está disponível apenas no app completo.`);
+      Alert.alert('Funcionalidade planejada', `O módulo "${mod.nome}" faz parte do roadmap e ainda não está disponível nesta versão.`);
     }
   };
 
