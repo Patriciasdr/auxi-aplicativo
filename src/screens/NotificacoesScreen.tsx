@@ -26,11 +26,11 @@ export function NotificacoesScreen() {
 
   const carregar = useCallback(async (refresh = false) => {
     if (!token || !condominioAtivo?.id) return;
-    refresh ? setAtualizando(true) : setCarregando(true);
+    if (refresh) setAtualizando(true);
+    else setCarregando(true);
     try {
       setErro(null);
       setItens(await buscarNotificacoes(token, condominioAtivo.id));
-      await atualizarContadorNotificacoes();
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);
       setErro('Não foi possível carregar as notificações. Verifique a configuração do banco de dados.');
@@ -38,23 +38,33 @@ export function NotificacoesScreen() {
       setCarregando(false);
       setAtualizando(false);
     }
-  }, [token, condominioAtivo?.id]);
+  }, [token, condominioAtivo]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
   async function marcarUma(item: NotificacaoItem) {
     if (!token) return;
-    if (!item.lida) {
-      await marcarNotificacaoLida(item.id, token);
-      setItens(atuais => atuais.map(n => n.id === item.id ? { ...n, lida: true } : n));
-      await atualizarContadorNotificacoes();
+    try {
+      if (!item.lida) {
+        await marcarNotificacaoLida(item.id, token);
+        setItens(atuais => atuais.map(n => n.id === item.id ? { ...n, lida: true } : n));
+        await atualizarContadorNotificacoes();
+      }
+      if (item.rota) navigation.navigate(item.rota);
+    } catch (error) {
+      console.error('Erro ao marcar a notificação como lida:', error);
+      setErro('Não foi possível atualizar a notificação. Tente novamente.');
     }
-    if (item.rota) navigation.navigate(item.rota);
   }
 
   async function marcarTodas() {
-    await marcarNotificacoesComoLidas();
-    setItens(atuais => atuais.map(item => ({ ...item, lida: true })));
+    try {
+      await marcarNotificacoesComoLidas();
+      setItens(atuais => atuais.map(item => ({ ...item, lida: true })));
+    } catch (error) {
+      console.error('Erro ao marcar todas as notificações como lidas:', error);
+      setErro('Não foi possível atualizar as notificações. Tente novamente.');
+    }
   }
 
   const possuiNaoLidas = itens.some(item => !item.lida);

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants/theme';
-import { aplicarMascaraCpf, soNumeros, cpfValido } from '../utils/cpf';
+import { aplicarMascaraCpf, soNumeros } from '../utils/cpf';
 import { ModalBloqueio } from '../components/ModalBloqueio';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';

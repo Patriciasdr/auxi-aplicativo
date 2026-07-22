@@ -47,6 +47,8 @@ export function ContatoCDScreen() {
         carregarDadosMorador(); 
       }
     }
+    // As funções usam os dados atuais do condomínio; recarregue ao trocar de contexto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [condominioAtivo]);
 
   
@@ -105,7 +107,8 @@ export function ContatoCDScreen() {
       setTitulo(''); setCorpoMensagem(''); setDestinatario('Selecione...'); setCategoria('Selecione...');
       
       carregarDadosMorador(); 
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Erro ao enviar mensagem para a diretoria:', error);
       Alert.alert('Erro', 'Não foi possível enviar sua mensagem.');
     } finally {
       setEnviando(false);
@@ -158,7 +161,8 @@ export function ContatoCDScreen() {
       Alert.alert('Sucesso', 'Sua resposta foi enviada ao morador!');
       setModalVisible(false);
       carregarCaixaEntrada(); 
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Erro ao responder mensagem da diretoria:', error);
       Alert.alert('Erro', 'Não foi possível enviar a resposta.');
     } finally {
       setEnviando(false);

@@ -8,13 +8,11 @@ import { atualizarStatusMudanca, buscarMudancas, criarMudanca, listarMudancas, s
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { CustomSelect } from '../components/CustomSelect';
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
-import { AppNavigatorRoutesProps } from '../navigation/types/navigation'; 
+import { useFocusEffect } from '@react-navigation/native';
 import { normalizarPapel } from '../config/modules';
 
 export function AgendaMudancasScreen() {
   const { condominioAtivo, token } = useAuth();
-  const navigation = useNavigation<AppNavigatorRoutesProps>(); 
   
   
   const isZelador = condominioAtivo?.papel === 'Zelador';
@@ -27,7 +25,7 @@ export function AgendaMudancasScreen() {
   
   const [approvedDays, setApprovedDays] = useState<string[]>([]);
   const [pendingDays, setPendingDays] = useState<string[]>([]);
-  const [blockedDays, setBlockedDays] = useState<number[]>([]);
+  const [blockedDays] = useState<number[]>([]);
   const [turnosOcupados, setTurnosOcupados] = useState<Record<string, string[]>>({});
   
   const [historico, setHistorico] = useState<any[]>([]);
@@ -190,6 +188,8 @@ export function AgendaMudancasScreen() {
   useFocusEffect(
     useCallback(() => {
       carregarDadosMudanca();
+      // Os valores abaixo são as entradas que determinam a recarga desta tela.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [condominioAtivo?.id, condominioAtivo?.papel, token])
   );
 
@@ -201,6 +201,7 @@ export function AgendaMudancasScreen() {
       Alert.alert('Sucesso', `A solicitação foi marcada como ${novaDecisao}!`);
       await carregarDadosMudanca();
     } catch (error) {
+      console.error('Erro ao atualizar a solicitação de mudança:', error);
       Alert.alert('Erro', 'Não foi possível salvar a decisão.');
     } finally {
       setCarregando(false);

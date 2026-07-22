@@ -207,7 +207,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           condominioAtivo: condominio
         }));
       }
-    } catch (e) {}
+    } catch (error) {
+      console.error('Erro ao salvar o condomínio ativo:', error);
+    }
   };
 
   const logout = async () => {
@@ -217,7 +219,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await SecureStore.deleteItemAsync('auxi_user_token');
         await SecureStore.deleteItemAsync('auxi_user_data');
       }
-    } catch (e) {}
+    } catch (error) {
+      console.error('Erro ao limpar os dados de autenticação:', error);
+    }
     
     setToken(null);
     setNomeUsuario('');
@@ -247,13 +251,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const atualizarContadorNotificacoes = async () => {
     if (!token || !condominioAtivo?.id) return;
-    const { count, error } = await supabase
-      .from('notificacoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('usuario_id', token)
-      .eq('condominio_id', condominioAtivo.id)
-      .eq('lida', false);
-    if (!error) setNotificacoes(count || 0);
+    try {
+      const { count, error } = await supabase
+        .from('notificacoes')
+        .select('id', { count: 'exact', head: true })
+        .eq('usuario_id', token)
+        .eq('condominio_id', condominioAtivo.id)
+        .eq('lida', false);
+      if (error) throw error;
+      setNotificacoes(count || 0);
+    } catch (error) {
+      console.error('Erro ao atualizar o contador de notificações:', error);
+    }
   };
 
   return (

@@ -1,11 +1,10 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable , Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
-import { Alert } from 'react-native';
 
 import { obterModulosPermitidos, normalizarPapel, ModuloApp } from '../config/modules';
 

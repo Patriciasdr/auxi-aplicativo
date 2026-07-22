@@ -153,6 +153,8 @@ export function ReservasScreen() {
       }
     }
     carregarReservasDoEspaco();
+    // dataFoco representa em conjunto o mês e o ano usados na consulta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [espacoSelecionado, dataFoco]);
 
   const handleDayPress = async (dia: number) => {
@@ -285,6 +287,7 @@ export function ReservasScreen() {
       setDataFoco(prev => new Date(prev));
       Alert.alert('Reserva atualizada', `A reserva foi ${status}.`);
     } catch (error) {
+      console.error('Erro ao atualizar o status da reserva:', error);
       Alert.alert('Erro', 'Não foi possível atualizar o status da reserva.');
     } finally {
       setEnviando(false);

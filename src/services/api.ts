@@ -259,7 +259,7 @@ export const buscarMudancas = async (condominioId: string) => {
       pendingDays.push(diaNum);
     }
 
-    const [ano, mes, dia] = m.data_mudanca.split('-');
+    const [, mes, dia] = m.data_mudanca.split('-');
     return {
       data: `${dia}/${mes}`,
       tipo: m.tipo,
@@ -288,11 +288,13 @@ export const buscarMudancas = async (condominioId: string) => {
 
 export const buscarDashboard = async (condominioId: string): Promise<DashboardDados> => {
   
-  const { data: condo } = await supabase
+  const { error: erroCondominio } = await supabase
     .from('condominios')
     .select('conta_corrente, investimentos, inadimplencia')
     .eq('id', condominioId)
     .single();
+
+  if (erroCondominio) throw erroCondominio;
 
   
   const { data: fluxo } = await supabase

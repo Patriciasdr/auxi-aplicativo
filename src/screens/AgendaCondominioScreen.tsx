@@ -101,7 +101,7 @@ export function AgendaCondominioScreen() {
       setCarregando(false);
       setAtualizando(false);
     }
-  }, [condominioAtivo?.id]);
+  }, [condominioAtivo]);
 
   useEffect(() => {
     carregarEventos();

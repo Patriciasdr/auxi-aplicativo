@@ -42,6 +42,8 @@ export function CircularesScreen() {
 
   useEffect(() => {
     carregarDados();
+    // A recarga deve ocorrer apenas quando o condomínio selecionado mudar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [condominioAtivo]);
 
   const handlePublicar = async () => {
@@ -64,6 +66,7 @@ export function CircularesScreen() {
 
       carregarDados(); 
     } catch (error) {
+      console.error('Erro ao publicar circular:', error);
       Alert.alert('Erro', 'Não foi possível publicar a circular.');
     } finally {
       setEnviando(false);

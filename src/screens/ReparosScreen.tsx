@@ -8,8 +8,6 @@ import { atualizarReparo, buscarReparos, criarReparo } from '../services/api';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { CustomSelect } from '../components/CustomSelect';
-import { useNavigation } from '@react-navigation/native';
-import { AppNavigatorRoutesProps } from '../navigation/types/navigation'; 
 import { normalizarPapel } from '../config/modules';
 
 interface ReparoItem {
@@ -27,7 +25,6 @@ interface ReparoItem {
 
 export function ReparosScreen() {
   const { condominioAtivo, token } = useAuth();
-  const navigation = useNavigation<AppNavigatorRoutesProps>();
 
   
   const papelAtual = normalizarPapel(condominioAtivo?.papel || 'Morador');
@@ -68,6 +65,8 @@ export function ReparosScreen() {
 
   useEffect(() => {
     carregarDadosReparos();
+    // A busca deve ser refeita somente quando o condomínio ativo mudar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [condominioAtivo]);
 
   const handleEnviarSolicitacao = async () => {

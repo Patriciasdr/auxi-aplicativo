@@ -27,18 +27,6 @@ const STATUS_COMPLETOS: OpcaoFiltro[] = [
   { label: 'Pago', value: 'pago' }
 ];
 
-const NOME_MESES: Record<string, string> = {
-  '01': 'Janeiro', '02': 'Fevereiro', '03': 'Março', '04': 'Abril',
-  '05': 'Maio', '06': 'Junho', '07': 'Julho', '08': 'Agosto',
-  '09': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
-};
-
-const NOME_STATUS: Record<string, string> = {
-  'a_vencer': 'A Vencer',
-  'vencido': 'Vencido',
-  'pago': 'Pago'
-};
-
 const obterAnoEMes = (dataString: string) => {
   if (!dataString) return { ano: '', mes: '' };
   let ano = '';
@@ -119,7 +107,7 @@ export function BoletosScreen() {
     }
     
     carregarBoletos();
-  }, [condominioAtivo]);
+  }, [condominioAtivo, isAdministrador]);
 
   
   useEffect(() => {
