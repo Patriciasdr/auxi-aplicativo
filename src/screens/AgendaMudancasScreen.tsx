@@ -120,7 +120,7 @@ export function AgendaMudancasScreen() {
     }
   };
 
-  async function carregarDadosMudanca() {
+  const carregarDadosMudanca = useCallback(async () => {
     if (!condominioAtivo?.id) return;
 
     setCarregando(true);
@@ -183,14 +183,12 @@ export function AgendaMudancasScreen() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [condominioAtivo, isZelador, token]);
 
   useFocusEffect(
     useCallback(() => {
       carregarDadosMudanca();
-      // Os valores abaixo são as entradas que determinam a recarga desta tela.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [condominioAtivo?.id, condominioAtivo?.papel, token])
+    }, [carregarDadosMudanca])
   );
 
   

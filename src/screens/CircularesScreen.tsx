@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, RefreshControl, Modal, Alert, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
@@ -27,7 +27,7 @@ export function CircularesScreen() {
 
   const catOptions = ['Aviso', 'Manutenção', 'Informação'];
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     if (!condominioAtivo?.id) return;
     setCarregando(true);
     try {
@@ -38,13 +38,11 @@ export function CircularesScreen() {
     } finally {
       setCarregando(false);
     }
-  };
+  }, [condominioAtivo]);
 
   useEffect(() => {
     carregarDados();
-    // A recarga deve ocorrer apenas quando o condomínio selecionado mudar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [condominioAtivo]);
+  }, [carregarDados]);
 
   const handlePublicar = async () => {
     if (novaCategoria === 'Selecione...' || !novoTitulo.trim() || !novoCorpo.trim()) {

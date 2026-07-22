@@ -44,7 +44,6 @@ const obterAnoEMes = (dataString: string) => {
 };
 
 const obterStatusErp = (boleto: BoletoProps): string => {
-  // "pendente" é o status legado equivalente a "a vencer".
   return boleto.status === 'pendente' ? 'a_vencer' : boleto.status;
 };
 

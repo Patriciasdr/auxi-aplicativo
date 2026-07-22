@@ -153,9 +153,7 @@ export function ReservasScreen() {
       }
     }
     carregarReservasDoEspaco();
-    // dataFoco representa em conjunto o mês e o ano usados na consulta.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [espacoSelecionado, dataFoco]);
+  }, [espacoSelecionado, dataFoco, anoAtual, mesAtual]);
 
   const handleDayPress = async (dia: number) => {
     if (!espacoSelecionado) return;

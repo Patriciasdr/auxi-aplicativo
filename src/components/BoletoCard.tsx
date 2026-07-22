@@ -51,7 +51,6 @@ export function BoletoCard({ data }: { data: BoletoProps }) {
   let diasLabel = '';
   let diasColor = '#888';
 
-  // O status é recebido do ERP. A data não altera a situação de pagamento.
   const isVencido = data.status === 'vencido';
   const isAVencer = data.status === 'a_vencer' || data.status === 'pendente';
 

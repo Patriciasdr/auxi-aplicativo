@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, Keyboard, TouchableOpacity, Modal } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -39,22 +39,7 @@ export function ContatoCDScreen() {
   const toggleDest = () => { setDestAberto(!destAberto); setCatAberta(false); };
   const toggleCat = () => { setCatAberta(!catAberta); setDestAberto(false); };
 
-  useEffect(() => {
-    if (condominioAtivo?.id) {
-      if (isDiretoria) {
-        carregarCaixaEntrada(); 
-      } else {
-        carregarDadosMorador(); 
-      }
-    }
-    // As funções usam os dados atuais do condomínio; recarregue ao trocar de contexto.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [condominioAtivo]);
-
-  
-  
-  
-  async function carregarDadosMorador() {
+  const carregarDadosMorador = useCallback(async () => {
     setCarregando(true);
     try {
       const dados = await buscarDiretoria(condominioAtivo!.id);
@@ -75,7 +60,7 @@ export function ContatoCDScreen() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [condominioAtivo, token]);
 
   const handleEnviarMensagem = async () => {
     if (destinatario === 'Selecione...' || categoria === 'Selecione...' || !titulo.trim() || !corpoMensagem.trim()) {
@@ -116,7 +101,7 @@ export function ContatoCDScreen() {
   };
 
 
-  async function carregarCaixaEntrada() {
+  const carregarCaixaEntrada = useCallback(async () => {
     setCarregando(true);
     try {
       const { data, error } = await supabase
@@ -135,7 +120,13 @@ export function ContatoCDScreen() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [condominioAtivo]);
+
+  useEffect(() => {
+    if (!condominioAtivo?.id) return;
+    if (isDiretoria) carregarCaixaEntrada();
+    else carregarDadosMorador();
+  }, [carregarCaixaEntrada, carregarDadosMorador, condominioAtivo?.id, isDiretoria]);
 
   const abrirMensagem = (msg: any) => {
     setMsgSelecionada(msg);

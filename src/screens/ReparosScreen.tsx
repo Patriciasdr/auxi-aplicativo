@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Keyboard } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
@@ -49,7 +49,7 @@ export function ReparosScreen() {
   const toggleArea = () => { setAreaAberta(!areaAberta); setUrgenciaAberta(false); };
   const toggleUrgencia = () => { setUrgenciaAberta(!urgenciaAberta); setAreaAberta(false); };
 
-  async function carregarDadosReparos() {
+  const carregarDadosReparos = useCallback(async () => {
     if (condominioAtivo?.id) {
       setCarregando(true);
       try {
@@ -61,13 +61,11 @@ export function ReparosScreen() {
         setCarregando(false);
       }
     }
-  }
+  }, [condominioAtivo]);
 
   useEffect(() => {
     carregarDadosReparos();
-    // A busca deve ser refeita somente quando o condomínio ativo mudar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [condominioAtivo]);
+  }, [carregarDadosReparos]);
 
   const handleEnviarSolicitacao = async () => {
     if (!podeAbrirChamado) {
