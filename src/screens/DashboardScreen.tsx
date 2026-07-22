@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   yAxisColumn: { justifyContent: 'space-between', paddingRight: 8, height: '100%' },
   yAxisText: { fontFamily: 'Montserrat_400Regular', fontSize: 9, color: '#aaa', transform: [{ translateY: -5 }] },
   plotArea: { flex: 1, position: 'relative', height: '100%' },
-  gridLinesContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between' },
+  gridLinesContainer: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, justifyContent: 'space-between' },
   gridLine: { width: '100%', height: 1, backgroundColor: '#f0f0f0' },
   barsContainer: { flex: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end' },
   barGroup: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: '100%' },

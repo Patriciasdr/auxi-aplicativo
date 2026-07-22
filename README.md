@@ -2,7 +2,7 @@
 
 Aplicativo mobile para gestão e comunicação condominial. O projeto centraliza serviços como boletos, comunicados, notificações internas, agenda, reservas de espaços, mudanças, reparos e contato com o corpo diretivo.
 
-Desenvolvido com Expo SDK 54, React Native, TypeScript e Supabase.
+Desenvolvido com Expo SDK 57, React Native, TypeScript e Supabase.
 
 ## Funcionalidades
 
@@ -24,7 +24,7 @@ Desenvolvido com Expo SDK 54, React Native, TypeScript e Supabase.
 
 ## Tecnologias
 
-- [Expo SDK 54](https://docs.expo.dev/versions/v54.0.0/)
+- [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)
 - React Native 0.81
 - React 19
 - TypeScript
@@ -35,35 +35,151 @@ Desenvolvido com Expo SDK 54, React Native, TypeScript e Supabase.
 
 ## Pré-requisitos
 
-- Node.js 20.19 ou superior, compatível com o Expo SDK 54
-- npm
-- Um projeto Supabase com a estrutura de dados esperada pelo aplicativo
-- Expo Go no dispositivo ou um emulador Android/iOS configurado
+- Node.js 22.13 ou superior, compatível com o Expo SDK 57;
+- npm, instalado junto com o Node.js;
+- Git para clonar o repositório;
+- acesso a um projeto Supabase com a estrutura esperada pelo aplicativo;
+- Expo Go em um dispositivo ou um emulador Android/iOS configurado.
 
-## Configuração
-
-1. Instale as dependências:
+Confirme as versões instaladas:
 
 ```bash
-npm install
+node --version
+npm --version
+git --version
 ```
 
-2. Crie um arquivo `.env` na raiz do projeto:
+## Execução rápida
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/Patriciasdr/auxi-aplicativo.git
+cd auxi-aplicativo
+```
+
+Se o projeto já estiver no computador, entre na pasta raiz, onde estão `package.json`, `App.tsx` e `app.json`.
+
+### 2. Instale as dependências
+
+```bash
+npm ci
+```
+
+O `npm ci` utiliza exatamente as versões registradas no `package-lock.json`. Use `npm install` apenas quando houver necessidade de alterar dependências.
+
+### 3. Configure as variáveis de ambiente
+
+Crie um arquivo chamado `.env` na raiz do projeto:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=SUA_CHAVE_ANON_PUBLICA
 ```
 
-Use somente a chave pública (`anon key`) no aplicativo. Nunca exponha a chave `service_role`.
+Substitua os valores pelas credenciais do ambiente de desenvolvimento ou homologação. Use somente a chave pública (`anon key`) no aplicativo. Nunca coloque a chave `service_role` no `.env` do app.
 
-3. Inicie o ambiente de desenvolvimento:
+O arquivo `.env` não é enviado ao Git. Cada desenvolvedor precisa criar o seu arquivo local.
+
+### 4. Inicie o Expo
+
 
 ```bash
 npm start
 ```
 
-Leia o QR Code com o Expo Go ou pressione a opção correspondente para abrir o app em um emulador.
+O terminal exibirá um QR Code e os atalhos disponíveis.
+
+### 5. Abra o aplicativo
+
+#### Em um celular com Expo Go
+
+1. Instale o Expo Go no celular.
+2. Mantenha o computador e o celular na mesma rede.
+3. Execute `npm start`.
+4. Leia o QR Code exibido no terminal.
+
+Se a rede bloquear a conexão local, tente:
+
+```bash
+npx expo start --tunnel
+```
+
+#### No Android
+
+Com um emulador iniciado ou dispositivo configurado:
+
+```bash
+npm run android
+```
+
+Também é possível executar `npm start` e pressionar `a` no terminal.
+
+#### No iOS
+
+O simulador iOS exige macOS com Xcode:
+
+```bash
+npm run ios
+```
+
+Também é possível executar `npm start` e pressionar `i` no terminal.
+
+#### No navegador
+
+```bash
+npm run web
+```
+
+## Validação antes de desenvolver
+
+Depois de instalar e configurar o projeto, execute:
+
+```bash
+npm run lint
+npx tsc --noEmit
+```
+
+Para verificar se os pacotes estão alinhados ao Expo SDK instalado:
+
+```bash
+npx expo-doctor
+```
+
+## Problemas comuns
+
+### O Expo não reconhece uma alteração
+
+Limpe o cache do Metro:
+
+```bash
+npx expo start --clear
+```
+
+### O celular não abre o projeto pelo QR Code
+
+- confirme que celular e computador estão na mesma rede;
+- libere Node.js e Expo no firewall;
+- desative temporariamente VPNs que bloqueiem a rede local;
+- tente `npx expo start --tunnel`.
+
+### Aparece erro de variável do Supabase
+
+- confirme que o arquivo se chama exatamente `.env`;
+- confirme que ele está na raiz do projeto;
+- confira os nomes `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY`;
+- reinicie o Expo depois de alterar o arquivo.
+
+### Aparecem erros depois de atualizar dependências
+
+Restaure a instalação conforme o lockfile:
+
+```bash
+npm ci
+npx expo start --clear
+```
+
+Evite executar `npm audit fix --force`, pois ele pode migrar o Expo para uma versão incompatível com o projeto.
 
 ## Scripts
 
@@ -73,8 +189,11 @@ Leia o QR Code com o Expo Go ou pressione a opção correspondente para abrir o 
 | `npm run android` | Abre o projeto no Android |
 | `npm run ios` | Abre o projeto no iOS |
 | `npm run web` | Abre a versão web |
+| `npm run lint` | Verifica padrões e boas práticas com ESLint |
 | `npm test` | Executa os testes com Jest |
 | `npx tsc --noEmit` | Valida os tipos TypeScript sem gerar arquivos |
+| `npx expo start --clear` | Inicia o Expo limpando o cache local |
+| `npx expo-doctor` | Verifica a compatibilidade das dependências |
 
 ## Estrutura do projeto
 
