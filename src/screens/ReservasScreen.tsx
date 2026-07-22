@@ -9,9 +9,10 @@ import { atualizarStatusReserva, bloquearDataEspaco, buscarEspacosReservas, cria
 import { formatarMoeda } from '../utils/formatters';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { EspacoSelecionavel, EspacoSelector } from '../components/EspacoSelector';
 import { normalizarPapel } from '../config/modules';
 
-interface EspacoProps {
+interface EspacoProps extends EspacoSelecionavel {
   id: string;
   nome: string;
   responsavel: string;
@@ -79,14 +80,26 @@ export function ReservasScreen() {
   const handlePrevMonth = () => setDataFoco(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   const handleNextMonth = () => setDataFoco(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
 
+  const handleSelecionarEspaco = (espaco: EspacoProps) => {
+    setEspacoSelecionado(espaco);
+    setDataFoco(new Date());
+    setModoBloqueio(false);
+    setReservasCompletas([]);
+    setApprovedDays([]);
+    setPendingDays([]);
+    setBlockedDays([]);
+    setClosedDays([]);
+  };
+
   useEffect(() => {
     async function carregarEspacos() {
       if (!condominioAtivo?.id) return;
       setCarregando(true);
+      setEspacos([]);
+      setEspacoSelecionado(null);
       try {
         const dados = await buscarEspacosReservas(condominioAtivo.id);
         setEspacos(dados as EspacoProps[]);
-        if (dados.length > 0) setEspacoSelecionado(dados[0] as EspacoProps);
       } catch (error) {
         console.error('Erro ao carregar espaços:', error);
       } finally {
@@ -358,32 +371,12 @@ export function ReservasScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Text style={styles.pageSub}>Escolha o espaço e toque em uma data para reservar</Text>
 
-        <View style={styles.espacosWrapper}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.espacosRow}>
-            {espacos.map((espaco, idx) => (
-              <TouchableOpacity
-                key={`${espaco.nome}-${idx}`}
-                style={[styles.espacoBtn, espacoSelecionado?.id === espaco.id && styles.espacoBtnActive]}
-                onPress={() => setEspacoSelecionado(espaco)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.espacoBtnText, espacoSelecionado?.id === espaco.id && styles.espacoBtnTextActive]}>
-                  {espaco.nome}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
-            
-            {podeCriarEspaco && (
-              <TouchableOpacity 
-                style={[styles.espacoBtn, { borderStyle: 'dashed', borderColor: COLORS.greenMain, backgroundColor: 'transparent' }]} 
-                onPress={() => setModalNovoEspacoVisible(true)}
-              >
-                <Text style={[styles.espacoBtnText, { color: COLORS.greenMain }]}>+ Novo Espaço</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        </View>
+        <EspacoSelector
+          espacos={espacos}
+          selecionado={espacoSelecionado}
+          onSelecionar={handleSelecionarEspaco}
+          onCriarNovo={podeCriarEspaco ? () => setModalNovoEspacoVisible(true) : undefined}
+        />
 
         {espacos.length === 0 ? (
           <View style={{ padding: 30, alignItems: 'center' }}>
@@ -392,6 +385,16 @@ export function ReservasScreen() {
               {podeCriarEspaco
                 ? "Nenhum espaço cadastrado. Toque em '+ Novo Espaço' para adicionar o primeiro." 
                 : "Este condomínio ainda não possui espaços disponíveis para reserva."}
+            </Text>
+          </View>
+        ) : !espacoSelecionado ? (
+          <View style={styles.selectionPrompt}>
+            <View style={styles.selectionPromptIcon}>
+              <Feather name="map-pin" size={24} color={COLORS.greenMain} />
+            </View>
+            <Text style={styles.selectionPromptTitle}>Selecione uma área</Text>
+            <Text style={styles.selectionPromptText}>
+              Escolha o espaço desejado para visualizar informações, disponibilidade e calendário.
             </Text>
           </View>
         ) : (
@@ -476,7 +479,7 @@ export function ReservasScreen() {
           </>
         )}
 
-        {isSindico && (
+        {isSindico && espacoSelecionado && (
           <View style={styles.panel}>
             <View style={styles.panelHead}><Text style={styles.panelTitle}>Solicitações pendentes</Text></View>
             {reservasCompletas.filter(reserva => reserva.status === 'pendente').length === 0 ? (
@@ -687,12 +690,10 @@ const styles = StyleSheet.create({
   center: { justifyContent: 'center', alignItems: 'center' },
   content: { padding: 14, paddingBottom: 40 },
   pageSub: { fontFamily: 'Montserrat_400Regular', fontSize: 11, color: COLORS.textMuted, marginBottom: 14, lineHeight: 16 },
-  espacosWrapper: { marginBottom: 18, marginHorizontal: -14 },
-  espacosRow: { paddingHorizontal: 14, gap: 8, paddingBottom: 4 },
-  espacoBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: COLORS.grayBorder, backgroundColor: COLORS.white },
-  espacoBtnActive: { backgroundColor: COLORS.greenMain, borderColor: COLORS.greenMain },
-  espacoBtnText: { fontFamily: 'Montserrat_600SemiBold', fontSize: 12, color: COLORS.textMid },
-  espacoBtnTextActive: { color: COLORS.white },
+  selectionPrompt: { alignItems: 'center', paddingVertical: 32, paddingHorizontal: 24, borderWidth: 1, borderColor: COLORS.grayBorder, borderRadius: 12, backgroundColor: COLORS.white, marginBottom: 14 },
+  selectionPromptIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.greenBg, marginBottom: 12 },
+  selectionPromptTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 14, color: COLORS.textDark },
+  selectionPromptText: { fontFamily: 'Montserrat_400Regular', fontSize: 11.5, lineHeight: 17, color: COLORS.textMuted, textAlign: 'center', marginTop: 5 },
   panel: { backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1, borderColor: COLORS.grayBorder, overflow: 'hidden', marginBottom: 14 },
   panelHead: { padding: 14, borderBottomWidth: 1, borderBottomColor: COLORS.grayBorder },
   panelTitle: { fontFamily: 'Montserrat_700Bold', fontSize: 13, color: COLORS.textDark },
