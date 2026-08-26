@@ -1,0 +1,637 @@
+<title>Login Unificado</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+  :root{
+    --green-deep:#00803f;
+    --green-main:#008542;
+    --green-bright:#00a859;
+    --paper:#f1f5f3;
+    --card:#ffffff;
+    --ink:#1a1a1a;
+    --ink-soft:#3a4a42;
+    --slate:#6b7c73;
+    --hair:#dbe4de;
+    --amber-bg:#fff8e6;
+    --red:#e53935;
+    --rail-bg:#0f1e16;
+    --shadow:0 18px 40px -22px rgba(15,30,22,0.35);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0f1912;
+      --card:#152218;
+      --ink:#eef3f0;
+      --ink-soft:#d6e3da;
+      --slate:#93a89c;
+      --hair:#25382c;
+      --amber-bg:#3a3016;
+      --shadow:0 18px 40px -18px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0f1912;
+    --card:#152218;
+    --ink:#eef3f0;
+    --ink-soft:#d6e3da;
+    --slate:#93a89c;
+    --hair:#25382c;
+    --amber-bg:#3a3016;
+    --shadow:0 18px 40px -18px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Public Sans",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--green-bright);color:#fff;}
+
+  h1,h2,h3{font-family:"Montserrat",system-ui,sans-serif;text-wrap:balance;margin:0;color:var(--ink-soft);}
+  .eyebrow{
+    font-family:"Space Mono",monospace;
+    font-size:0.72rem;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--green-bright);
+    margin:0 0 10px;
+  }
+  a{color:var(--green-main);}
+
+  .shell{
+    display:grid;
+    grid-template-columns:64px 1fr;
+  }
+  @media (max-width:760px){ .shell{grid-template-columns:1fr;} .rail{display:none;} }
+
+  .rail{
+    position:sticky;
+    top:0;
+    height:100vh;
+    background:var(--rail-bg);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    padding:24px 0;
+  }
+  .rail button{
+    all:unset;
+    cursor:pointer;
+    width:28px;height:28px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Space Mono",monospace;
+    font-size:0.68rem;
+    color:#6f8577;
+    transition:color .2s, background .2s;
+  }
+  .rail button.active{ background:var(--green-bright); color:#08150e; font-weight:700; }
+  .rail button:focus-visible{outline:2px solid var(--green-bright); outline-offset:2px;}
+
+  main{ scroll-snap-type:y proximity; }
+  section{
+    min-height:100vh;
+    padding:96px clamp(24px,7vw,96px);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    scroll-snap-align:start;
+    border-bottom:1px solid var(--hair);
+  }
+  section:last-of-type{border-bottom:none;}
+  .wrap{max-width:920px; width:100%; margin:0 auto;}
+  .wrap.wide{max-width:1140px;}
+
+  p{line-height:1.65; color:var(--slate); max-width:62ch;}
+
+  /* ---- Cover ---- */
+  .cover{ background:linear-gradient(150deg,var(--green-deep),var(--green-main) 55%,#0c3a24); color:#fff; }
+  .cover .eyebrow{color:#bff0d4;}
+  .cover h1{ color:#fff; font-size:clamp(2.4rem,5vw,3.6rem); font-weight:800; line-height:1.05; max-width:14ch;}
+  .cover p{ color:#dcf2e5; max-width:52ch; font-size:1.05rem; margin-top:18px;}
+  .cover .meta{
+    margin-top:48px;
+    display:flex; flex-wrap:wrap; gap:36px;
+  }
+  .cover .meta div{font-family:"Space Mono",monospace; font-size:0.78rem; color:#a9dcbd;}
+  .cover .meta strong{display:block; font-family:"Montserrat"; font-size:0.95rem; color:#fff; font-weight:700; margin-top:4px;}
+  .badge-row{display:flex; gap:10px; margin-top:34px; flex-wrap:wrap;}
+  .badge{
+    font-family:"Space Mono",monospace; font-size:0.72rem; letter-spacing:0.02em;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.28);
+    color:#eafff2; padding:6px 12px; border-radius:100px;
+  }
+
+  /* ---- generic content blocks ---- */
+  .lede{font-size:1.14rem; color:var(--ink-soft); max-width:56ch; margin-top:16px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:36px;}
+  @media (max-width:680px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--card); border:1px solid var(--hair); border-radius:16px;
+    padding:24px 26px; box-shadow:var(--shadow);
+  }
+  .card h3{font-size:1rem; font-weight:700; margin-bottom:8px;}
+  .card p{margin:0; font-size:0.93rem;}
+
+  .card.request{border-left:4px solid var(--hair);}
+  .card.delivered{border-left:4px solid var(--green-bright);}
+  .tag{
+    font-family:"Space Mono",monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--slate);
+  }
+  .tag.done{color:var(--green-bright);}
+
+  ul.checklist{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:10px;}
+  ul.checklist li{
+    font-size:0.95rem; color:var(--ink-soft); padding-left:26px; position:relative; line-height:1.5;
+  }
+  ul.checklist li::before{
+    content:"✓"; position:absolute; left:0; top:0;
+    width:18px;height:18px; border-radius:50%;
+    background:var(--green-bright); color:#06150c; font-size:0.68rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  table{width:100%; border-collapse:collapse; margin-top:28px; font-size:0.88rem;}
+  caption{text-align:left; margin-bottom:10px;}
+  th,td{ text-align:left; padding:11px 14px; border-bottom:1px solid var(--hair); vertical-align:top;}
+  th{ font-family:"Space Mono",monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--slate); font-weight:400;}
+  td.impl{color:var(--green-bright); font-weight:600;}
+  .table-wrap{overflow-x:auto;}
+
+  .stack-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:26px;}
+  .pill{
+    background:var(--card); border:1px solid var(--hair); border-radius:9px;
+    padding:9px 14px; font-size:0.84rem; color:var(--ink-soft); font-weight:600;
+    box-shadow:var(--shadow);
+  }
+
+  /* ---- flow demo section ---- */
+  .demo-layout{ display:grid; grid-template-columns:340px 1fr; gap:56px; align-items:center; margin-top:40px;}
+  @media (max-width:840px){ .demo-layout{grid-template-columns:1fr; justify-items:center;} }
+
+  .phone{
+    width:280px; height:572px; border-radius:38px;
+    background:#0b0f0d; padding:12px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.45), inset 0 0 0 2px #1c2620;
+    position:relative;
+  }
+  .phone::before{
+    content:""; position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    width:84px; height:18px; background:#0b0f0d; border-radius:0 0 14px 14px; z-index:5;
+  }
+  .screen{
+    width:100%; height:100%; border-radius:28px; overflow:hidden; background:#f1f5f3;
+    position:relative; font-family:"Public Sans",sans-serif;
+  }
+  .pane{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    opacity:0; transform:translateX(16px); transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+  }
+  .pane.active{opacity:1; transform:translateX(0); pointer-events:auto;}
+
+  .ph-top{ background:var(--green-main); padding:34px 20px 20px; color:#fff; }
+  .ph-top.grad{ background:linear-gradient(135deg,#00a859,#00803f); }
+  .ph-logo{display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .ph-mark{width:24px;height:24px; background:#fff; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--green-main); font-family:"Montserrat"; font-weight:800; font-size:13px;}
+  .ph-logo span{font-family:"Montserrat"; font-weight:700; font-size:14px;}
+  .ph-top p{color:#eafff2; font-size:11px; line-height:1.5; margin:0; max-width:none;}
+
+  .ph-body{padding:20px; flex:1; display:flex; flex-direction:column;}
+  .ph-body h4{font-family:"Montserrat"; font-weight:700; font-size:15px; color:#3a4a42; margin:0 0 4px;}
+  .ph-body .sub{font-size:11px; color:#6b7c73; line-height:1.5; margin:0 0 18px;}
+
+  .ph-field{margin-top:4px;}
+  .ph-field label{display:block; font-family:"Montserrat"; font-weight:600; font-size:10px; color:#3a4a42; margin-bottom:6px;}
+  .ph-field .box{
+    border:1.5px solid #d8e2dc; border-radius:9px; padding:11px 12px; font-size:12.5px;
+    color:#1a1a1a; background:#fff; font-family:"Space Mono",monospace; min-height:20px;
+    display:flex; align-items:center;
+  }
+  .ph-field .box .cursor{display:inline-block; width:1px; height:12px; background:#00803f; margin-left:1px; animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .ph-btn{
+    margin-top:auto; background:var(--green-main); color:#fff; border-radius:10px;
+    padding:12px; text-align:center; font-family:"Montserrat"; font-weight:700; font-size:12.5px;
+  }
+  .ph-btn.loading{ opacity:0.75; }
+
+  .chip{display:flex; align-items:center; gap:9px; background:#e7f7ee; border-radius:10px; padding:9px 10px; margin-bottom:16px;}
+  .chip .av{width:26px;height:26px;border-radius:50%; background:#00a859; color:#fff; display:flex; align-items:center; justify-content:center; font-family:"Montserrat"; font-weight:700; font-size:11px;}
+  .chip .txt{font-size:10.5px; color:#1a1a1a; line-height:1.4;}
+  .chip .txt b{font-family:"Montserrat";}
+  .back-link{font-family:"Montserrat"; font-weight:600; font-size:10px; color:#6b7c73; margin-bottom:12px;}
+
+  .modal-overlay{position:absolute; inset:0; background:rgba(15,30,22,0.9); display:flex; align-items:center; justify-content:center; padding:16px;}
+  .modal-card{background:#fff; border-radius:14px; padding:18px; text-align:center;}
+  .modal-icon{width:42px;height:42px;border-radius:50%; background:#fff8e6; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:19px;}
+  .modal-card h5{font-family:"Montserrat"; font-weight:700; font-size:12.5px; color:#3a4a42; margin:0 0 8px;}
+  .modal-card p{font-size:9.6px; color:#6b7c73; line-height:1.5; margin:0 0 12px;}
+  .modal-box{background:#f1f5f3; border-radius:9px; padding:10px; text-align:left; margin-bottom:12px;}
+  .modal-box .lbl{font-family:"Montserrat"; font-weight:700; font-size:9.5px; color:#00803f; margin-bottom:4px;}
+  .modal-box .ln{font-size:9px; color:#3a4a42; margin-top:4px;}
+  .modal-btn{background:var(--green-main); color:#fff; border-radius:9px; padding:10px; font-family:"Montserrat"; font-weight:700; font-size:11px;}
+
+  .toast{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px;
+    background:linear-gradient(135deg,#00a859,#00803f); color:#fff;
+  }
+  .toast .tick{width:52px;height:52px;border-radius:50%; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-size:24px;}
+  .toast p{color:#eafff2; font-family:"Montserrat"; font-weight:700; font-size:13px; margin:0;}
+
+  .demo-info h3{font-size:1.3rem; margin-bottom:10px;}
+  .scenario-toggle{display:flex; gap:8px; margin:22px 0;}
+  .scenario-toggle button{
+    all:unset; cursor:pointer; font-family:"Space Mono",monospace; font-size:0.74rem;
+    padding:8px 14px; border-radius:100px; border:1px solid var(--hair); color:var(--slate);
+  }
+  .scenario-toggle button.active{background:var(--green-main); border-color:var(--green-main); color:#fff;}
+  .step-list{list-style:none; margin:0; padding:0; display:grid; gap:6px;}
+  .step-list li{
+    font-size:0.86rem; color:var(--slate); padding:9px 12px; border-radius:8px; border:1px solid transparent;
+    transition:background .2s, color .2s, border-color .2s;
+  }
+  .step-list li.on{background:var(--card); color:var(--ink-soft); font-weight:600; border-color:var(--hair); box-shadow:var(--shadow);}
+
+  footer.slide{
+    background:var(--rail-bg); color:#dcf2e5;
+  }
+  footer.slide h2{color:#fff;}
+  footer.slide p{color:#a9dcbd;}
+  footer.slide .card{background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.14); box-shadow:none;}
+  footer.slide .card h3{color:#fff;}
+  footer.slide .card p{color:#bcdcc9;}
+
+  @media (prefers-reduced-motion: reduce){
+    .pane{transition:none;}
+    .box .cursor{animation:none;}
+  }
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="Navegação da apresentação">
+    <button data-go="s0" class="active" aria-label="Abertura">01</button>
+    <button data-go="s1" aria-label="Objetivo">02</button>
+    <button data-go="s2" aria-label="Entrega vs pedido">03</button>
+    <button data-go="s3" aria-label="Demonstração do fluxo">04</button>
+    <button data-go="s4" aria-label="Diferenciais">05</button>
+    <button data-go="s5" aria-label="Arquitetura">06</button>
+    <button data-go="s6" aria-label="Status">07</button>
+  </nav>
+
+  <main>
+    <section id="s0" class="cover">
+      <div class="wrap">
+        <p class="eyebrow">Termo de abertura · resultado do desafio</p>
+        <h1>Login Unificado de Clientes</h1>
+        <p>Tela de acesso em React Native para unificar, pelo CPF, o login de clientes hoje cadastrados em sistemas diferentes da Auxiliadora — e o que foi entregue além do escopo original.</p>
+        <div class="badge-row">
+          <span class="badge">Mentor · Marcel Guinther</span>
+          <span class="badge">Gestor apoiador · Guilherme Hahn</span>
+          <span class="badge">Estagiária · Patricia Rosa</span>
+        </div>
+        <div class="meta">
+          <div>Prazo do desafio<strong>22–23 jun 2026</strong></div>
+          <div>Apresentação<strong>26 ago 2026</strong></div>
+          <div>Status<strong>Concluído e ampliado</strong></div>
+          <div>Repositório<strong><a href="https://github.com/Patriciasdr/auxi-aplicativo" target="_blank" rel="noopener" style="color:#fff; text-decoration:underline;">auxi-aplicativo ↗</a></strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="s1">
+      <div class="wrap">
+        <p class="eyebrow">Objetivo do desafio</p>
+        <h2 style="font-size:clamp(1.6rem,3.4vw,2.2rem); max-width:26ch;">Avaliar organização de código, raciocínio de fluxo e cuidado com a experiência do usuário.</h2>
+        <p class="lede">O cenário simulado: clientes cadastrados em sistemas diferentes precisam de um login unificado. Para quem usa o app isso deve ser invisível — só o CPF é informado, e o sistema decide o caminho.</p>
+        <div class="grid2">
+          <div class="card">
+            <span class="tag">Situação 1</span>
+            <h3>Acesso direto</h3>
+            <p>CPF encontrado na base → avança para a tela de senha e libera o login.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Situação 2</span>
+            <h3>Bloqueio de cadastro</h3>
+            <p>CPF não encontrado → modal empático orienta a procurar o gerente, sem permitir login. O bloqueio acontece antes de pedir senha.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="s2">
+      <div class="wrap wide">
+        <p class="eyebrow">O que foi pedido × o que foi entregue</p>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);">O desafio pedia uma tela. Entreguei um aplicativo.</h2>
+        <p class="lede">Os dois fluxos obrigatórios foram implementados exatamente como especificado — com dados de teste fiéis ao enunciado. A partir daí, o projeto virou o app real da Auxiliadora Digital, com backend próprio.</p>
+        <div class="grid2">
+          <div class="card request">
+            <span class="tag">Escopo original</span>
+            <h3>Tela de identificação por CPF</h3>
+            <p>Máscara, validação, botão Continuar, saudação com nome, senha simulada e modal de bloqueio — dados fixos no código.</p>
+          </div>
+          <div class="card delivered">
+            <span class="tag done">Entregue</span>
+            <h3>App completo com Supabase</h3>
+            <p>Autenticação real (Auth + RPC), sessão persistida com SecureStore, e 10 módulos funcionais além do login: boletos, dashboard, circulares, agenda, reservas, mudanças, reparos, fale com a diretoria e notificações em tempo real.</p>
+          </div>
+        </div>
+        <ul class="checklist">
+          <li>Máscara e validação de CPF (000.000.000-00), com estado de carregamento</li>
+          <li>Fluxo de acesso direto e fluxo de bloqueio, exatamente como o termo pede</li>
+          <li>Regra de identificação migrada do código para uma RPC no Supabase — camada de serviço real, não mockada</li>
+          <li>Controle de acesso por perfil (síndico, gestor, morador, proprietário, zelador, administradora…)</li>
+          <li>TypeScript, componentização e 6 suítes com 34 testes automatizados</li>
+          <li>README e documentação funcional detalhada de todas as regras de negócio</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="s3">
+      <div class="wrap wide">
+        <p class="eyebrow">Demonstração</p>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);">Os dois fluxos, lado a lado</h2>
+        <p class="lede">Recriação fiel das telas reais (cores, textos e componentes do código-fonte). Escolha um cenário — os dados de teste são os mesmos do termo de abertura.</p>
+
+        <div class="demo-layout">
+          <div class="phone">
+            <div class="screen">
+              <div class="pane" data-pane="login" >
+                <div class="ph-top">
+                  <div class="ph-logo"><div class="ph-mark">A</div><span>Auxiliadora Digital</span></div>
+                  <p>Bem-vindo(a)! Acesse com seu CPF para entrar no portal e no app.</p>
+                </div>
+                <div class="ph-body">
+                  <h4>Vamos começar</h4>
+                  <p class="sub">Digite seu CPF para identificarmos sua conta. Unificamos seu acesso em um só lugar.</p>
+                  <div class="ph-field">
+                    <label>CPF</label>
+                    <div class="box"><span id="cpfTyped"></span><span class="cursor" id="cpfCursor"></span></div>
+                  </div>
+                  <div class="ph-btn" id="btnContinuar" style="margin-top:22px;">Continuar</div>
+                </div>
+              </div>
+
+              <div class="pane" data-pane="senha">
+                <div class="ph-top grad">
+                  <div class="ph-logo"><div class="ph-mark" style="color:#00a859;">A</div><span>Auxiliadora Digital</span></div>
+                  <p>Estamos quase lá. Confirme sua senha para acessar.</p>
+                </div>
+                <div class="ph-body">
+                  <div class="back-link">← Trocar conta</div>
+                  <div class="chip">
+                    <div class="av" id="avatarLetter">M</div>
+                    <div class="txt">Olá, <b id="nomeCliente">Maria Silva</b><br><span id="cpfMascarado">111.111.111-11</span></div>
+                  </div>
+                  <h4>Confirme sua identidade</h4>
+                  <p class="sub">Sua conta foi reconhecida. Informe sua senha cadastrada para prosseguir.</p>
+                  <div class="ph-field">
+                    <label>Senha</label>
+                    <div class="box">••••••••</div>
+                  </div>
+                  <div class="ph-btn" style="margin-top:22px;">Entrar</div>
+                </div>
+              </div>
+
+              <div class="pane" data-pane="sucesso">
+                <div class="toast">
+                  <div class="tick">✓</div>
+                  <p>Login realizado com sucesso</p>
+                </div>
+              </div>
+
+              <div class="pane" data-pane="bloqueio">
+                <div class="ph-top">
+                  <div class="ph-logo"><div class="ph-mark">A</div><span>Auxiliadora Digital</span></div>
+                  <p>Bem-vindo(a)! Acesse com seu CPF para entrar no portal e no app.</p>
+                </div>
+                <div class="modal-overlay">
+                  <div class="modal-card">
+                    <div class="modal-icon">⚠️</div>
+                    <h5>Atualização de cadastro necessária</h5>
+                    <p>Sua conta está cadastrada apenas com e-mail ou nome de usuário, sem um CPF vinculado. Por segurança, precisamos atualizar seu cadastro antes de liberar o acesso.</p>
+                    <div class="modal-box">
+                      <div class="lbl">O que fazer agora:</div>
+                      <p style="font-size:9px; margin:0 0 8px;">Entre em contato com o gerente da sua unidade ou administrador responsável pelo contrato.</p>
+                      <div class="ln">📞 Central: 0800 000 0000</div>
+                      <div class="ln">✉️ atendimento@auxiliadorapredial.com.br</div>
+                    </div>
+                    <div class="modal-btn">Entendi</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-info">
+            <h3 id="scenarioTitle">Acesso direto — CPF encontrado</h3>
+            <p id="scenarioDesc">CPF 111.111.111-11 pertence a Maria Silva. O sistema reconhece a conta, avança para a senha e libera o acesso.</p>
+            <div class="scenario-toggle">
+              <button data-scenario="direto" class="active">111.111.111-11 · Maria Silva</button>
+              <button data-scenario="bloqueio">999.999.999-99 · não cadastrado</button>
+            </div>
+            <ul class="step-list" id="stepList"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="s4">
+      <div class="wrap wide">
+        <p class="eyebrow">Diferenciais entregues</p>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);">Do catálogo de 24 módulos do app, 10 já têm fluxo real implementado.</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grupo</th><th>Implementado</th><th>Planejado (próximas entregas)</th></tr></thead>
+            <tbody>
+              <tr><td>Financeiro</td><td class="impl">Boletos e pagamentos, Saldo, Dashboard gerencial</td><td>Extratos, cotas pendentes, notas fiscais</td></tr>
+              <tr><td>Comunicação</td><td class="impl">Circulares, Agenda do condomínio, Fale com a diretoria, Notificações</td><td>Fale conosco</td></tr>
+              <tr><td>Operação e acesso</td><td class="impl">Reserva de espaços, Agenda de mudanças, Manutenção e reparos</td><td>Painel da portaria, controle de consumo</td></tr>
+              <tr><td>Imóveis</td><td>—</td><td>Meus imóveis, pesquisa de aluguéis</td></tr>
+              <tr><td>Documentos e RH</td><td>—</td><td>Documentos digitalizados, departamento pessoal</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:22px; font-size:0.85rem;">Controle de visibilidade por perfil — síndico, gestor, proprietário, morador, zelador, administradora e conselheiro veem exatamente o que podem agir.</p>
+      </div>
+    </section>
+
+    <section id="s5">
+      <div class="wrap">
+        <p class="eyebrow">Arquitetura e stack</p>
+        <h2 style="font-size:clamp(1.5rem,3vw,2rem);">Cliente React Native, com Supabase como backend.</h2>
+        <p class="lede">Autenticação via Supabase Auth + RPC de identificação por CPF; sessão persistida com SecureStore/AsyncStorage; regras de negócio (aprovação de reservas, regras de mudança, cobrança) configuráveis por condomínio direto no banco.</p>
+        <div class="stack-row">
+          <span class="pill">Expo SDK 57</span>
+          <span class="pill">React Native 0.86</span>
+          <span class="pill">React 19.2</span>
+          <span class="pill">TypeScript 6</span>
+          <span class="pill">React Navigation 7</span>
+          <span class="pill">Supabase Auth · RLS · RPC · Realtime</span>
+          <span class="pill">Jest + Testing Library</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="s6" class="cover" style="background:linear-gradient(150deg,#0c3a24,var(--green-deep) 60%);">
+      <div class="wrap">
+        <p class="eyebrow">Status atual</p>
+        <h2 style="color:#fff; font-size:clamp(1.6rem,3.4vw,2.1rem); max-width:26ch;">Desafio concluído — fluxos principais rodando com dados reais do Supabase.</h2>
+        <div class="card" style="background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.16); box-shadow:none; margin-top:32px; max-width:560px;">
+          <h3 style="color:#fff;">Entregue</h3>
+          <p style="color:#cdeedd;">Login unificado, 10 módulos com fluxo completo, controle por perfil, testes automatizados e documentação funcional.</p>
+        </div>
+        <a href="https://github.com/Patriciasdr/auxi-aplicativo" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:10px; margin-top:36px; background:#fff; color:var(--green-deep); text-decoration:none; font-family:'Montserrat'; font-weight:700; font-size:0.9rem; padding:13px 22px; border-radius:100px; width:fit-content;">
+          Ver repositório no GitHub ↗
+        </a>
+        <p style="color:#a9dcbd; margin-top:16px; font-size:0.8rem; font-family:'Space Mono',monospace;">github.com/Patriciasdr/auxi-aplicativo</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var sections = ['s0','s1','s2','s3','s4','s5','s6'];
+  var railBtns = document.querySelectorAll('.rail button');
+  railBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.getElementById(btn.dataset.go).scrollIntoView({behavior:'smooth'});
+    });
+  });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        railBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.go === e.target.id); });
+      }
+    });
+  }, {threshold:0.55});
+  sections.forEach(function(id){ var el = document.getElementById(id); if(el) io.observe(el); });
+
+  // ---- phone demo state machine ----
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var panes = {
+    login: document.querySelector('[data-pane="login"]'),
+    senha: document.querySelector('[data-pane="senha"]'),
+    sucesso: document.querySelector('[data-pane="sucesso"]'),
+    bloqueio: document.querySelector('[data-pane="bloqueio"]')
+  };
+  var cpfTyped = document.getElementById('cpfTyped');
+  var stepList = document.getElementById('stepList');
+  var scenarioTitle = document.getElementById('scenarioTitle');
+  var scenarioDesc = document.getElementById('scenarioDesc');
+  var nomeCliente = document.getElementById('nomeCliente');
+  var cpfMascarado = document.getElementById('cpfMascarado');
+  var avatarLetter = document.getElementById('avatarLetter');
+  var btnContinuar = document.getElementById('btnContinuar');
+
+  var scenarios = {
+    direto: {
+      title: 'Acesso direto — CPF encontrado',
+      desc: 'CPF 111.111.111-11 pertence a Maria Silva. O sistema reconhece a conta, avança para a senha e libera o acesso.',
+      cpf: '111.111.111-11',
+      nome: 'Maria Silva',
+      steps: ['Cliente digita o CPF', 'CPF encontrado na base', 'Tela de senha com o nome do cliente', 'Login liberado']
+    },
+    bloqueio: {
+      title: 'Bloqueio de cadastro — CPF não encontrado',
+      desc: 'CPF fora da base de teste. O acesso é bloqueado antes de pedir senha, com orientação para procurar o gerente.',
+      cpf: '999.999.999-99',
+      nome: '',
+      steps: ['Cliente digita o CPF', 'CPF não encontrado na base', 'Modal de bloqueio exibido', 'Login não permitido']
+    }
+  };
+
+  var current = 'direto';
+  var stepIndex = 0;
+  var timer = null;
+
+  function setActivePane(name){
+    Object.keys(panes).forEach(function(k){ panes[k].classList.toggle('active', k === name); });
+  }
+
+  function renderSteps(){
+    stepList.innerHTML = '';
+    scenarios[current].steps.forEach(function(s, i){
+      var li = document.createElement('li');
+      li.textContent = (i+1) + '. ' + s;
+      if(i === stepIndex) li.classList.add('on');
+      stepList.appendChild(li);
+    });
+  }
+
+  function typeCpf(target, done){
+    var chars = target.split('');
+    var out = '';
+    var i = 0;
+    if(reduced){ cpfTyped.textContent = target; done(); return; }
+    (function step(){
+      if(i < chars.length){
+        out += chars[i]; cpfTyped.textContent = out; i++;
+        setTimeout(step, 55);
+      } else { done(); }
+    })();
+  }
+
+  function runScenario(){
+    var s = scenarios[current];
+    cpfTyped.textContent = '';
+    stepIndex = 0; renderSteps(); setActivePane('login'); btnContinuar.classList.remove('loading');
+
+    typeCpf(s.cpf, function(){
+      stepIndex = 1; renderSteps();
+      timer = setTimeout(function(){
+        btnContinuar.classList.add('loading');
+        btnContinuar.textContent = 'Verificando...';
+        timer = setTimeout(function(){
+          btnContinuar.textContent = 'Continuar';
+          btnContinuar.classList.remove('loading');
+          stepIndex = 2; renderSteps();
+
+          if(current === 'direto'){
+            nomeCliente.textContent = s.nome;
+            cpfMascarado.textContent = s.cpf;
+            avatarLetter.textContent = s.nome[0];
+            setActivePane('senha');
+            timer = setTimeout(function(){
+              stepIndex = 3; renderSteps();
+              setActivePane('sucesso');
+              timer = setTimeout(restart, 2200);
+            }, 2600);
+          } else {
+            setActivePane('bloqueio');
+            timer = setTimeout(function(){
+              stepIndex = 3; renderSteps();
+              timer = setTimeout(restart, 2400);
+            }, 400);
+          }
+        }, 650);
+      }, 500);
+    });
+  }
+
+  function restart(){ runScenario(); }
+
+  document.querySelectorAll('.scenario-toggle button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.scenario-toggle button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      current = btn.dataset.scenario;
+      scenarioTitle.textContent = scenarios[current].title;
+      scenarioDesc.textContent = scenarios[current].desc;
+      clearTimeout(timer);
+      runScenario();
+    });
+  });
+
+  runScenario();
+})();
+</script>
